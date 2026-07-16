@@ -1,0 +1,30 @@
+# Build artifacts
+dist/
+build/
+*.pyc
+__pycache__/
+*.spec
+
+# Installer build artifacts (not committed)
+installer/output/
+installer/vendor/
+installer/*.log
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# User data (per-machine, not shared)
+progress.json
+.python_pals/
+
+# Temp
+.run/
+*.tmp
+*.log
