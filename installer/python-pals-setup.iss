@@ -16,7 +16,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={pf}\{#MyAppName}
+DefaultDirName={commonpf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=output
 OutputBaseFilename=python-pals-setup
@@ -25,7 +25,6 @@ SolidCompression=yes
 PrivilegesRequired=admin
 ChangesEnvironment=no
 SetupLogging=yes
-LogFileName={tmp}\python-pals-setup.log
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -40,7 +39,6 @@ Source: "post-install.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Include launch and update scripts
 Source: "..\scripts\launch.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "..\scripts\setup.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "..\scripts\update.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
 [Icons]
