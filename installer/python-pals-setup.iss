@@ -5,9 +5,9 @@
 #define MyAppName "Python Pals"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Python Pals"
-#define MyAppURL "https://github.com/yourusername/python-pals"
+#define MyAppURL "https://github.com/ratnadipsinha/python-pals"
 #define MyAppExeName "python-pals.exe"
-#define GitHubRepoURL "https://github.com/yourusername/python-pals.git"
+#define GitHubRepoURL "https://github.com/ratnadipsinha/python-pals.git"
 
 [Setup]
 AppName={#MyAppName}
@@ -50,7 +50,7 @@ Name: "{commonprograms}\{#MyAppName}\Uninstall {#MyAppName}"; Filename: "{uninst
 
 [Run]
 ; Run post-install script
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\post-install.ps1"""; Flags: runhidden; Description: "Setting up Python Pals..."
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\post-install.ps1"" -GitHubRepo ""{#GitHubRepoURL}"""; Flags: runhidden; Description: "Setting up Python Pals..."
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\__pycache__"

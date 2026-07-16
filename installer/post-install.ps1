@@ -4,7 +4,7 @@
 
 param(
     [string]$AppDir = (Split-Path -Parent $MyInvocation.MyCommand.Path),
-    [string]$GitHubRepo = "https://github.com/yourusername/python-pals.git"
+    [string]$GitHubRepo = "https://github.com/ratnadipsinha/python-pals.git"
 )
 
 $ErrorActionPreference = "Continue"

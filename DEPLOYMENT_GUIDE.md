@@ -9,7 +9,7 @@ Complete guide to building, distributing, and updating Python Pals.
 | Machine | Role |
 |---|---|
 | **Source PC** | This dev machine. Write code, test, commit to GitHub. |
-| **GitHub** | Single source of truth (`https://github.com/yourusername/python-pals`). No CI, purely passive. |
+| **GitHub** | Single source of truth (`https://github.com/ratnadipsinha/python-pals`). No CI, purely passive. |
 | **Target PC** | Kid's machine. One-click install, auto-updates on demand. |
 
 **Data flow:** Source → GitHub → Target pulls when asked (never pushed to).
@@ -69,7 +69,7 @@ ISCC.exe installer\python-pals-setup.iss
 
 3. Run post-install.ps1
    ├─ git init
-   ├─ git remote add origin https://github.com/yourusername/python-pals
+   ├─ git remote add origin https://github.com/ratnadipsinha/python-pals
    ├─ git fetch origin main
    └─ git checkout -B main origin/main
        (ensures target PC gets LATEST code, even if
@@ -142,7 +142,7 @@ Next launch: new code is running
 # On source PC
 cd c:\Users\ratna\apps\python project\python_pals
 git init
-git remote add origin https://github.com/yourusername/python-pals
+git remote add origin https://github.com/ratnadipsinha/python-pals
 git add -A
 git commit -m "Initial commit: Python Pals app"
 git branch -M main
@@ -152,12 +152,12 @@ git push -u origin main
 ### Update the installer script
 Edit `installer\python-pals-setup.iss`:
 ```iss
-#define GitHubRepoURL "https://github.com/yourusername/python-pals.git"
+#define GitHubRepoURL "https://github.com/ratnadipsinha/python-pals.git"
 ```
 
 Edit `installer\post-install.ps1`:
 ```powershell
-[string]$GitHubRepo = "https://github.com/yourusername/python-pals.git"
+[string]$GitHubRepo = "https://github.com/ratnadipsinha/python-pals.git"
 ```
 
 ### Create a GitHub Release
