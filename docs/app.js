@@ -261,36 +261,101 @@ function renderLesson() {
       <div class="lesson-head">
         <h1>${ch.emoji} ${escapeHtml(ch.title)}</h1>
         <div class="lesson-head-actions">
-          ${ch.youtube ? `<a class="btn small yt" href="${escapeHtml(ch.youtube)}" target="_blank" rel="noopener">📺 Watch on YouTube</a>` : ""}
+          ${ch.youtube ? `<button class="btn small yt" id="yt-btn">📺 Watch on YouTube</button>` : ""}
           <button class="btn small" id="hint-btn">💡 Hint</button>
         </div>
       </div>
-      <div class="theory-card">
-        ${ch.theory.map(line => `<div class="theory-line">${formatTheory(line)}</div>`).join("")}
-      </div>
-      <div class="puzzle-card">
-        <div class="puzzle-prompt">${escapeHtml(pz.prompt)}</div>
-        <textarea id="code-editor" class="code-editor" spellcheck="false" placeholder="Write your code here…"></textarea>
-        <div class="puzzle-actions">
-          <button class="btn primary" id="run-btn">▶ Run</button>
-          <span class="puzzle-counter">Puzzle ${view.pzIndex + 1} / ${ch.puzzles.length}</span>
-          <div class="spacer"></div>
-          <button class="btn small" id="prev-btn" ${view.pzIndex === 0 ? "disabled" : ""}>← Prev</button>
-          <button class="btn small" id="next-btn" ${view.pzIndex === ch.puzzles.length - 1 ? "disabled" : ""}>Next →</button>
+      <div class="lesson-stage">
+        <div class="lesson-left">
+          <div class="theory-card">
+            ${ch.theory.map(line => `<div class="theory-line">${formatTheory(line)}</div>`).join("")}
+          </div>
+          <div class="puzzle-card">
+            <div class="puzzle-prompt">${escapeHtml(pz.prompt)}</div>
+            <textarea id="code-editor" class="code-editor" spellcheck="false" placeholder="Write your code here…"></textarea>
+            <div class="puzzle-actions">
+              <button class="btn primary" id="run-btn">▶ Run</button>
+              <span class="puzzle-counter">Puzzle ${view.pzIndex + 1} / ${ch.puzzles.length}</span>
+              <div class="spacer"></div>
+              <button class="btn small" id="prev-btn" ${view.pzIndex === 0 ? "disabled" : ""}>← Prev</button>
+              <button class="btn small" id="next-btn" ${view.pzIndex === ch.puzzles.length - 1 ? "disabled" : ""}>Next →</button>
+            </div>
+            <div id="output-box" class="output-box empty">Press ▶ Run to see your output here.</div>
+          </div>
         </div>
-        <div id="output-box" class="output-box empty">Press ▶ Run to see your output here.</div>
+        <div id="side-panel" class="side-panel">${sidePanelPlaceholder(ch)}</div>
       </div>
     </div>`;
 
   document.getElementById("run-btn").onclick = runPuzzle;
   document.getElementById("prev-btn").onclick = () => { if (view.pzIndex > 0) { view.pzIndex--; renderLesson(); } };
   document.getElementById("next-btn").onclick = () => { if (view.pzIndex < ch.puzzles.length - 1) { view.pzIndex++; renderLesson(); } };
-  document.getElementById("hint-btn").onclick = showHint;
+  document.getElementById("hint-btn").onclick = showHintInPanel;
+  const ytBtn = document.getElementById("yt-btn");
+  if (ytBtn) ytBtn.onclick = () => showVideoInPanel(ch);
 
   const editor = document.getElementById("code-editor");
   editor.addEventListener("keydown", e => {
     if (e.key === "Tab") { e.preventDefault(); insertAtCursor(editor, "    "); }
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runPuzzle();
+  });
+}
+
+function sidePanelPlaceholder(ch) {
+  return `
+    <div class="side-empty">
+      <div class="side-empty-emoji">👋</div>
+      <p>${ch.youtube ? "Press 📺 <b>Watch on YouTube</b> to play the video here," : ""} ${ch.youtube ? "or press" : "Press"} 💡 <b>Hint</b> for a quick reminder and a mini quiz.</p>
+    </div>`;
+}
+
+function youtubeEmbedUrl(url) {
+  try {
+    const u = new URL(url);
+    const id = u.searchParams.get("v");
+    const list = u.searchParams.get("list");
+    let embed = `https://www.youtube-nocookie.com/embed/${id}`;
+    if (list) embed += `?list=${list}`;
+    return embed;
+  } catch (e) { return null; }
+}
+
+function showVideoInPanel(ch) {
+  const panel = document.getElementById("side-panel");
+  const embed = youtubeEmbedUrl(ch.youtube);
+  panel.innerHTML = `
+    <div class="side-head">📺 ${escapeHtml(ch.title)}</div>
+    <div class="video-frame">
+      ${embed
+        ? `<iframe src="${embed}" title="${escapeHtml(ch.title)} video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
+        : `<div class="side-empty"><p>Couldn't load that video here — <a href="${escapeHtml(ch.youtube)}" target="_blank" rel="noopener">open it on YouTube</a> instead.</p></div>`}
+    </div>`;
+}
+
+function showHintInPanel() {
+  const i = view.chIndex;
+  const hint = HINTS[i];
+  const quiz = QUIZ[i] || [];
+  const panel = document.getElementById("side-panel");
+  panel.innerHTML = `
+    <div class="side-head">💡 Quick Reminder</div>
+    <p class="modal-hint">${escapeHtml(hint)}</p>
+    ${quiz.map((q, qi) => `
+      <div class="quiz-q">
+        <div class="quiz-question">${escapeHtml(q.q)}</div>
+        <div class="quiz-opts">
+          ${q.opts.map((opt, oi) => `<button class="quiz-opt" data-qi="${qi}" data-oi="${oi}">${escapeHtml(opt)}</button>`).join("")}
+        </div>
+      </div>`).join("")}`;
+  panel.querySelectorAll(".quiz-opt").forEach(btn => {
+    btn.onclick = () => {
+      const qi = Number(btn.dataset.qi), oi = Number(btn.dataset.oi);
+      const correct = quiz[qi].a === oi;
+      const group = panel.querySelectorAll(`.quiz-opt[data-qi="${qi}"]`);
+      group.forEach(b => b.disabled = true);
+      btn.classList.add(correct ? "correct" : "wrong");
+      if (!correct) group[quiz[qi].a].classList.add("correct");
+    };
   });
 }
 
@@ -350,36 +415,6 @@ async function runPuzzle() {
 }
 
 // ---------- Hint / quiz popup ----------
-function showHint() {
-  const i = view.chIndex;
-  const hint = HINTS[i];
-  const quiz = QUIZ[i] || [];
-  const modal = document.getElementById("modal");
-  modal.classList.remove("hidden");
-  modal.innerHTML = `
-    <div class="modal-card">
-      <div class="modal-head">💡 Quick Reminder <button class="modal-close" id="modal-close">✕</button></div>
-      <p class="modal-hint">${escapeHtml(hint)}</p>
-      ${quiz.map((q, qi) => `
-        <div class="quiz-q">
-          <div class="quiz-question">${escapeHtml(q.q)}</div>
-          <div class="quiz-opts">
-            ${q.opts.map((opt, oi) => `<button class="quiz-opt" data-qi="${qi}" data-oi="${oi}">${escapeHtml(opt)}</button>`).join("")}
-          </div>
-        </div>`).join("")}
-    </div>`;
-  document.getElementById("modal-close").onclick = closeModal;
-  modal.querySelectorAll(".quiz-opt").forEach(btn => {
-    btn.onclick = () => {
-      const qi = Number(btn.dataset.qi), oi = Number(btn.dataset.oi);
-      const correct = quiz[qi].a === oi;
-      const group = modal.querySelectorAll(`.quiz-opt[data-qi="${qi}"]`);
-      group.forEach(b => b.disabled = true);
-      btn.classList.add(correct ? "correct" : "wrong");
-      if (!correct) group[quiz[qi].a].classList.add("correct");
-    };
-  });
-}
 function closeModal() {
   const modal = document.getElementById("modal");
   modal.classList.add("hidden");
