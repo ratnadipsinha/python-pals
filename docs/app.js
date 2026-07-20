@@ -28,6 +28,14 @@ function saveProgress() {
 
 let progress = loadProgress();
 let pyodideReady = null;
+
+function lessonPercent() {
+  const donePz = new Set(progress.solved).size;
+  return TOTAL_PUZZLES ? Math.round((donePz / TOTAL_PUZZLES) * 100) : 0;
+}
+function adventureUnlocked() {
+  return lessonPercent() >= 90;
+}
 let view = { mode: "welcome", chIndex: 0, pzIndex: 0, advIndex: 0 };
 
 // ---------- Pyodide bootstrap ----------
@@ -88,6 +96,7 @@ function buildRail() {
     rail.appendChild(btn);
   });
 
+  const unlocked = adventureUnlocked();
   let lastWorld = null;
   ADV_LEVELS.forEach((lv, i) => {
     const world = lv.world || "🌳 ADVENTURE MODE";
@@ -101,8 +110,9 @@ function buildRail() {
     }
     const done = progress.adv_solved.includes(lv.id);
     const btn = document.createElement("button");
-    btn.className = "rail-item" + (done ? " done" : "");
-    btn.innerHTML = `<span class="rail-emoji">${lv.emoji}</span><span>${lv.id} ${lv.title}</span>${done ? '<span class="rail-check">✓</span>' : ""}`;
+    btn.className = "rail-item" + (done ? " done" : "") + (unlocked ? "" : " locked");
+    const label = unlocked ? `${lv.id} ${lv.title}` : `🔒 ${lv.id} ${lv.title}`;
+    btn.innerHTML = `<span class="rail-emoji">${unlocked ? lv.emoji : "🔒"}</span><span>${label}</span>${done ? '<span class="rail-check">✓</span>' : ""}`;
     btn.onclick = () => showAdventure(i);
     rail.appendChild(btn);
   });
@@ -125,6 +135,9 @@ function showHome() {
   const done = donePz + doneAdv;
   const pct = TOTAL_TASKS ? Math.round((done / TOTAL_TASKS) * 100) : 0;
 
+  const todayStr = new Date().toDateString();
+  if (!progress.started) progress.started = todayStr;
+
   main.innerHTML = `
     <div class="home-wrap">
       <h1>Hi ${escapeHtml(progress.name || "coder")}! 👋</h1>
@@ -137,16 +150,18 @@ function showHome() {
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
         <div class="progress-sub">${done} / ${TOTAL_TASKS} done</div>
         <div class="stat-grid">
-          <div class="stat"><div class="stat-label">📅 Started</div><div class="stat-val">${progress.started || "—"}</div></div>
+          <div class="stat"><div class="stat-label">📅 Started</div><div class="stat-val">${progress.started}</div></div>
+          <div class="stat"><div class="stat-label">🕒 Today</div><div class="stat-val">${todayStr}</div></div>
           <div class="stat"><div class="stat-label">📖 Exercises</div><div class="stat-val">${donePz} / ${TOTAL_PUZZLES}</div></div>
           <div class="stat"><div class="stat-label">🏅 Badges</div><div class="stat-val">${doneAdv} / ${TOTAL_ADV}</div></div>
-          <div class="stat"><div class="stat-label">⭐ Stars</div><div class="stat-val">${progress.stars}</div></div>
         </div>
       </div>
+      ${pct >= 100 ? `<div class="win-banner">🎉 WOW! You finished everything! You are a Python star! 🌟</div>` : ""}
       <div class="home-actions">
         <button class="btn primary" id="continue-btn">▶ Continue Learning</button>
         <button class="btn green" id="adv-btn">🌳 Adventure Mode</button>
         <button class="btn amber" id="rename-btn">✏️ Change Name</button>
+        <button class="btn danger" id="reset-btn">🔄 Reset Progress</button>
       </div>
     </div>`;
 
@@ -159,7 +174,42 @@ function showHome() {
     showAdventure(idx >= 0 ? idx : 0);
   };
   document.getElementById("rename-btn").onclick = showWelcome;
+  document.getElementById("reset-btn").onclick = confirmReset;
+  progress.last = todayStr;
+  saveProgress();
   highlightRail();
+}
+
+function confirmReset() {
+  const modal = document.getElementById("modal");
+  modal.classList.remove("hidden");
+  modal.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-head" style="color:#d32f2f">⚠️ Are you sure?</div>
+      <p><b>This will erase ALL your progress:</b></p>
+      <ul class="reset-list">
+        <li>All ⭐ stars will be gone</li>
+        <li>All 🏅 badges will be gone</li>
+        <li>You will go back to 0%</li>
+      </ul>
+      <p class="modal-hint" style="margin-top:0">Your name and start date will stay.</p>
+      <div class="modal-actions">
+        <button class="btn small" id="reset-cancel">Cancel</button>
+        <button class="btn danger small" id="reset-confirm">Yes, reset</button>
+      </div>
+    </div>`;
+  document.getElementById("reset-cancel").onclick = closeModal;
+  document.getElementById("reset-confirm").onclick = () => {
+    progress.solved = [];
+    progress.adv_solved = [];
+    progress.stars = 0;
+    progress.last = new Date().toDateString();
+    saveProgress();
+    refreshStats();
+    buildRail();
+    closeModal();
+    showHome();
+  };
 }
 
 // ---------- Welcome ----------
@@ -210,7 +260,10 @@ function renderLesson() {
     <div class="lesson-wrap">
       <div class="lesson-head">
         <h1>${ch.emoji} ${escapeHtml(ch.title)}</h1>
-        <button class="btn small" id="hint-btn">💡 Hint</button>
+        <div class="lesson-head-actions">
+          ${ch.youtube ? `<a class="btn small yt" href="${escapeHtml(ch.youtube)}" target="_blank" rel="noopener">📺 Watch on YouTube</a>` : ""}
+          <button class="btn small" id="hint-btn">💡 Hint</button>
+        </div>
       </div>
       <div class="theory-card">
         ${ch.theory.map(line => `<div class="theory-line">${formatTheory(line)}</div>`).join("")}
@@ -336,8 +389,30 @@ function closeModal() {
 // ---------- Adventure mode ----------
 function showAdventure(i) {
   view.mode = "adventure"; view.advIndex = i;
-  renderAdventure();
   highlightRail();
+  if (!adventureUnlocked()) { renderAdventureLocked(); return; }
+  renderAdventure();
+}
+
+function renderAdventureLocked() {
+  const pct = lessonPercent();
+  const donePz = new Set(progress.solved).size;
+  const main = document.getElementById("main");
+  main.innerHTML = `
+    <div class="lesson-wrap">
+      <div class="lock-card">
+        <div class="lock-emoji">🔒</div>
+        <h1>Adventure Mode is locked!</h1>
+        <p class="sub">Finish your lessons first to unlock the game worlds. 🌳🚀</p>
+        <div class="lock-pct">You need 90% of lessons. You are at ${pct}% (${donePz} / ${TOTAL_PUZZLES} exercises).</div>
+        <div class="progress-bar lock-bar"><div class="progress-fill" style="width:${pct}%;background:${pct >= 90 ? "var(--mint)" : "var(--sun)"}"></div></div>
+        <button class="btn primary" id="lock-continue-btn">▶ Continue Learning</button>
+      </div>
+    </div>`;
+  document.getElementById("lock-continue-btn").onclick = () => {
+    const idx = CHAPTERS.findIndex((ch, i) => ch.puzzles.some((_, j) => !progress.solved.includes(`${i}-${j}`)));
+    showChapter(idx >= 0 ? idx : 0);
+  };
 }
 
 function renderAdventure() {

@@ -104,6 +104,8 @@ body{
 .rail-item:hover{ background: rgba(123,92,255,0.1); }
 .rail-item.active{ background: var(--grape); color: #fff; }
 .rail-item.done:not(.active){ color: #2fa34a; }
+.rail-item.locked{ color: #b9aecb; cursor: pointer; }
+.rail-item.locked:hover{ background: rgba(123,92,255,0.06); }
 .rail-emoji{ font-size: 15px; }
 .rail-check{ margin-left: auto; }
 
@@ -133,6 +135,8 @@ body{
 .btn.primary:hover{ background: var(--grape-dark); }
 .btn.green{ background: #2fa34a; }
 .btn.amber{ background: var(--sun); color: #5a3b00; }
+.btn.danger{ background: #d32f2f; }
+.btn.yt{ background: var(--sky); color: #023; text-decoration: none; display: inline-flex; align-items: center; }
 .btn:disabled{ opacity: 0.4; cursor: default; }
 .btn:not(:disabled):hover{ filter: brightness(1.06); }
 
@@ -154,11 +158,16 @@ body{
 .stat-label{ font-size: 12px; color: var(--muted); }
 .stat-val{ font-size: 15px; font-weight: bold; margin-top: 2px; }
 .home-actions{ display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+.win-banner{
+  margin-top: 16px; font-size: 16px; font-weight: bold; color: #2fa34a;
+  background: var(--good-bg); border: 1px solid var(--mint); border-radius: 10px; padding: 12px 16px;
+}
 
 /* ---------- lesson ---------- */
 .lesson-wrap, .adv-wrap{ max-width: 760px; margin: 0 auto; padding: 28px; }
-.lesson-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.lesson-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
 .lesson-head h1{ font-size: 22px; margin: 0; }
+.lesson-head-actions{ display: flex; align-items: center; gap: 8px; }
 .theory-card{
   background: #eaf7fe; border: 1px solid var(--sky); border-radius: 12px;
   padding: 16px 18px; margin-bottom: 18px; font-size: 14.5px; line-height: 1.6;
@@ -235,6 +244,21 @@ body{
 .quiz-opt.correct{ background: var(--good-bg); border-color: var(--mint); }
 .quiz-opt.wrong{ background: var(--bad-bg); border-color: var(--bubble); }
 .quiz-opt:disabled{ cursor: default; }
+.reset-list{ margin: 6px 0 14px; padding-left: 20px; color: var(--muted); font-size: 14px; }
+.reset-list li{ margin-bottom: 4px; }
+.modal-actions{ display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+/* ---------- adventure locked ---------- */
+.lock-card{
+  max-width: 480px; margin: 6vh auto 0; text-align: center;
+  background: #fff8e6; border: 2px solid var(--sun); border-radius: 14px; padding: 26px 24px;
+}
+@media (prefers-color-scheme: dark){ .lock-card{ background: #2b2311; } }
+.lock-emoji{ font-size: 56px; }
+.lock-card h1{ font-size: 20px; margin: 4px 0 2px; }
+.lock-card .sub{ color: var(--muted); margin: 0 0 10px; }
+.lock-pct{ font-weight: bold; color: var(--grape); margin-bottom: 10px; font-size: 15px; }
+.lock-bar{ margin-bottom: 18px; }
 
 /* ---------- scrollbars ---------- */
 .rail::-webkit-scrollbar, .main::-webkit-scrollbar{ width: 10px; }
