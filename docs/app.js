@@ -270,7 +270,7 @@ function renderLesson() {
       </div>
       <div class="puzzle-card">
         <div class="puzzle-prompt">${escapeHtml(pz.prompt)}</div>
-        <textarea id="code-editor" class="code-editor" spellcheck="false">${escapeHtml(pz.starter)}</textarea>
+        <textarea id="code-editor" class="code-editor" spellcheck="false" placeholder="Write your code here…"></textarea>
         <div class="puzzle-actions">
           <button class="btn primary" id="run-btn">▶ Run</button>
           <span class="puzzle-counter">Puzzle ${view.pzIndex + 1} / ${ch.puzzles.length}</span>
