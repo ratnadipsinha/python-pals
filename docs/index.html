@@ -25,7 +25,7 @@
     <div class="brand">🐍 Python Pals</div>
     <button class="home-link" id="home-link">🏠 Home</button>
     <div class="spacer"></div>
-    <div class="chip" id="badge-count">🏅 0 badges</div>
+    <div class="chip" id="badge-count">🚀 0 projects</div>
     <div class="chip amber" id="star-count">⭐ 0 stars</div>
   </header>
 
@@ -36,8 +36,7 @@
 
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
   <script src="data.js"></script>
-  <script src="adventure-data.js"></script>
-  <script src="engine.js"></script>
+  <script src="projects-data.js"></script>
   <script src="app.js"></script>
   <script>
     document.getElementById("home-link").onclick = () => { if (typeof showHome === "function" && progress.name) showHome(); };

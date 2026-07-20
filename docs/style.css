@@ -94,7 +94,6 @@ body{
   font-size: 11px; letter-spacing: 0.08em; color: var(--muted);
   padding: 8px 16px 6px; text-transform: uppercase; font-weight: bold;
 }
-.rail-label.world.space{ color: #7b5cff; }
 .rail-item{
   display: flex; align-items: center; gap: 8px; width: 100%;
   background: transparent; text-align: left; padding: 7px 12px; margin: 1px 8px;
@@ -104,8 +103,6 @@ body{
 .rail-item:hover{ background: rgba(123,92,255,0.1); }
 .rail-item.active{ background: var(--grape); color: #fff; }
 .rail-item.done:not(.active){ color: #2fa34a; }
-.rail-item.locked{ color: #b9aecb; cursor: pointer; }
-.rail-item.locked:hover{ background: rgba(123,92,255,0.06); }
 .rail-emoji{ font-size: 15px; }
 .rail-check{ margin-left: auto; }
 
@@ -165,7 +162,6 @@ body{
 
 /* ---------- lesson ---------- */
 .lesson-wrap{ max-width: none; margin: 0; padding: 28px; }
-.adv-wrap{ max-width: 760px; margin: 0 auto; padding: 28px; }
 .lesson-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
 .lesson-head h1{ font-size: 22px; margin: 0; }
 .lesson-head-actions{ display: flex; align-items: center; gap: 8px; }
@@ -216,25 +212,8 @@ body{
 .output-box.warn{ background: var(--warn-bg); border-color: var(--sun); }
 .output-box.bad{ background: var(--bad-bg); border-color: var(--bubble); }
 
-/* ---------- adventure ---------- */
-.adv-mission{
-  background: #fff8e6; border: 1px solid var(--sun); border-radius: 12px;
-  padding: 14px 18px; margin-bottom: 16px; font-size: 14.5px; line-height: 1.6;
-}
-@media (prefers-color-scheme: dark){ .adv-mission{ background: #2b2311; } }
-.mission-code{ font-family: Consolas, "Cascadia Code", monospace; }
-.adv-stage{ display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: start; }
-.adv-tools{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.tool-chip{
-  font-family: Consolas, "Cascadia Code", monospace; font-size: 12px;
-  background: rgba(61,220,151,0.15); color: #157a4c; border: 1px solid var(--mint);
-  border-radius: 999px; padding: 3px 10px;
-}
-@media (prefers-color-scheme: dark){ .tool-chip{ color: #6ff0ba; } }
-.adv-right{ display: flex; flex-direction: column; align-items: center; gap: 12px; }
-#adv-canvas{ width: 100%; max-width: 360px; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); }
-.adv-right .output-box{ width: 100%; margin-top: 0; }
-@media (max-width: 720px){ .adv-stage{ grid-template-columns: 1fr; } }
+/* ---------- projects ---------- */
+.proj-editor{ min-height: 220px; }
 
 /* ---------- modal (hint/quiz) ---------- */
 .modal{
@@ -265,18 +244,6 @@ body{
 .reset-list{ margin: 6px 0 14px; padding-left: 20px; color: var(--muted); font-size: 14px; }
 .reset-list li{ margin-bottom: 4px; }
 .modal-actions{ display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
-
-/* ---------- adventure locked ---------- */
-.lock-card{
-  max-width: 480px; margin: 6vh auto 0; text-align: center;
-  background: #fff8e6; border: 2px solid var(--sun); border-radius: 14px; padding: 26px 24px;
-}
-@media (prefers-color-scheme: dark){ .lock-card{ background: #2b2311; } }
-.lock-emoji{ font-size: 56px; }
-.lock-card h1{ font-size: 20px; margin: 4px 0 2px; }
-.lock-card .sub{ color: var(--muted); margin: 0 0 10px; }
-.lock-pct{ font-weight: bold; color: var(--grape); margin-bottom: 10px; font-size: 15px; }
-.lock-bar{ margin-bottom: 18px; }
 
 /* ---------- scrollbars ---------- */
 .rail::-webkit-scrollbar, .main::-webkit-scrollbar{ width: 10px; }

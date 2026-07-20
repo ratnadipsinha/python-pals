@@ -5,22 +5,19 @@
 const CHAPTERS = window.PP_DATA.chapters;
 const HINTS = window.PP_DATA.hints;
 const QUIZ = window.PP_DATA.quiz;
-const ADV_LEVELS = window.PP_ADV_LEVELS;
-const THEMES = window.PP_THEMES;
-const GRID = window.PP_GRID;
+const PROJECTS = window.PP_PROJECTS;
 
 const TOTAL_PUZZLES = CHAPTERS.reduce((n, c) => n + c.puzzles.length, 0);
-const TOTAL_ADV = ADV_LEVELS.length;
-const TOTAL_TASKS = TOTAL_PUZZLES + TOTAL_ADV;
+const TOTAL_PROJECTS = PROJECTS.length;
 
-const SAVE_KEY = "python_pals_progress_v1";
+const SAVE_KEY = "python_pals_progress_v2";
 
 function loadProgress() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) { /* ignore */ }
-  return { stars: 0, solved: [], adv_solved: [], name: "", started: "", last: "" };
+  return { stars: 0, solved: [], projects_done: [], name: "", started: "", last: "" };
 }
 function saveProgress() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
@@ -28,15 +25,7 @@ function saveProgress() {
 
 let progress = loadProgress();
 let pyodideReady = null;
-
-function lessonPercent() {
-  const donePz = new Set(progress.solved).size;
-  return TOTAL_PUZZLES ? Math.round((donePz / TOTAL_PUZZLES) * 100) : 0;
-}
-function adventureUnlocked() {
-  return lessonPercent() >= 90;
-}
-let view = { mode: "welcome", chIndex: 0, pzIndex: 0, advIndex: 0 };
+let view = { mode: "welcome", chIndex: 0, pzIndex: 0, projIndex: 0 };
 
 // ---------- Pyodide bootstrap ----------
 async function initPyodide() {
@@ -48,22 +37,32 @@ async function initPyodide() {
 }
 pyodideReady = initPyodide();
 
-async function runPython(code, heroEngine) {
+// input() in a puzzle/project is bridged to a real browser prompt() so
+// projects like the Number Guessing Game are genuinely interactive.
+function jsInputBridge(promptText) {
+  const answer = window.prompt(promptText || "");
+  return answer === null ? "" : answer;
+}
+
+async function runPython(code) {
   const py = await pyodideReady;
   py.globals.set("__pp_code", code);
-  py.globals.set("__pp_hero", heroEngine || null);
+  py.globals.set("__pp_input", jsInputBridge);
   const src = `
-import io, sys, json
+import io, sys, json, builtins
 _buf = io.StringIO()
 _old_stdout = sys.stdout
+_old_input = builtins.input
 sys.stdout = _buf
+builtins.input = lambda prompt="": __pp_input(prompt)
 _err = None
 try:
-    exec(__pp_code, {"hero": __pp_hero} if __pp_hero is not None else {})
+    exec(__pp_code, {})
 except Exception as _e:
     _err = type(_e).__name__ + ": " + str(_e)
 finally:
     sys.stdout = _old_stdout
+    builtins.input = _old_input
 json.dumps({"output": _buf.getvalue(), "error": _err})
 `;
   const resultJson = py.runPython(src);
@@ -73,7 +72,7 @@ json.dumps({"output": _buf.getvalue(), "error": _err})
 // ---------- Chrome: header stats ----------
 function refreshStats() {
   document.getElementById("star-count").textContent = `⭐ ${progress.stars} stars`;
-  document.getElementById("badge-count").textContent = `🏅 ${progress.adv_solved.length} badges`;
+  document.getElementById("badge-count").textContent = `🚀 ${progress.projects_done.length} projects`;
 }
 
 // ---------- Rail ----------
@@ -96,24 +95,18 @@ function buildRail() {
     rail.appendChild(btn);
   });
 
-  const unlocked = adventureUnlocked();
-  let lastWorld = null;
-  ADV_LEVELS.forEach((lv, i) => {
-    const world = lv.world || "🌳 ADVENTURE MODE";
-    if (world !== lastWorld) {
-      lastWorld = world;
-      const label = document.createElement("div");
-      label.className = "rail-label world" + (world.includes("SPACE") ? " space" : "");
-      label.textContent = world;
-      label.style.marginTop = "14px";
-      rail.appendChild(label);
-    }
-    const done = progress.adv_solved.includes(lv.id);
+  const projLabel = document.createElement("div");
+  projLabel.className = "rail-label";
+  projLabel.textContent = "🚀 PROJECTS";
+  projLabel.style.marginTop = "14px";
+  rail.appendChild(projLabel);
+
+  PROJECTS.forEach((p, i) => {
+    const done = progress.projects_done.includes(p.id);
     const btn = document.createElement("button");
-    btn.className = "rail-item" + (done ? " done" : "") + (unlocked ? "" : " locked");
-    const label = unlocked ? `${lv.id} ${lv.title}` : `🔒 ${lv.id} ${lv.title}`;
-    btn.innerHTML = `<span class="rail-emoji">${unlocked ? lv.emoji : "🔒"}</span><span>${label}</span>${done ? '<span class="rail-check">✓</span>' : ""}`;
-    btn.onclick = () => showAdventure(i);
+    btn.className = "rail-item" + (done ? " done" : "");
+    btn.innerHTML = `<span class="rail-emoji">${p.emoji}</span><span>${p.title}</span>${done ? '<span class="rail-check">✓</span>' : ""}`;
+    btn.onclick = () => showProject(i);
     rail.appendChild(btn);
   });
 }
@@ -122,7 +115,7 @@ function highlightRail() {
   const items = document.querySelectorAll(".rail-item");
   items.forEach(el => el.classList.remove("active"));
   const idx = view.mode === "lesson" ? view.chIndex
-    : view.mode === "adventure" ? CHAPTERS.length + view.advIndex : -1;
+    : view.mode === "project" ? CHAPTERS.length + view.projIndex : -1;
   if (idx >= 0 && items[idx]) items[idx].classList.add("active");
 }
 
@@ -131,9 +124,8 @@ function showHome() {
   view.mode = "home";
   const main = document.getElementById("main");
   const donePz = new Set(progress.solved).size;
-  const doneAdv = new Set(progress.adv_solved).size;
-  const done = donePz + doneAdv;
-  const pct = TOTAL_TASKS ? Math.round((done / TOTAL_TASKS) * 100) : 0;
+  const doneProj = new Set(progress.projects_done).size;
+  const pct = TOTAL_PUZZLES ? Math.round((donePz / TOTAL_PUZZLES) * 100) : 0;
 
   const todayStr = new Date().toDateString();
   if (!progress.started) progress.started = todayStr;
@@ -148,18 +140,18 @@ function showHome() {
           <span class="pct">${pct}%</span>
         </div>
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-        <div class="progress-sub">${done} / ${TOTAL_TASKS} done</div>
+        <div class="progress-sub">${donePz} / ${TOTAL_PUZZLES} exercises done</div>
         <div class="stat-grid">
           <div class="stat"><div class="stat-label">📅 Started</div><div class="stat-val">${progress.started}</div></div>
           <div class="stat"><div class="stat-label">🕒 Today</div><div class="stat-val">${todayStr}</div></div>
           <div class="stat"><div class="stat-label">📖 Exercises</div><div class="stat-val">${donePz} / ${TOTAL_PUZZLES}</div></div>
-          <div class="stat"><div class="stat-label">🏅 Badges</div><div class="stat-val">${doneAdv} / ${TOTAL_ADV}</div></div>
+          <div class="stat"><div class="stat-label">🚀 Projects</div><div class="stat-val">${doneProj} / ${TOTAL_PROJECTS}</div></div>
         </div>
       </div>
-      ${pct >= 100 ? `<div class="win-banner">🎉 WOW! You finished everything! You are a Python star! 🌟</div>` : ""}
+      ${pct >= 100 ? `<div class="win-banner">🎉 WOW! You finished every chapter! You are a Python star! 🌟</div>` : ""}
       <div class="home-actions">
         <button class="btn primary" id="continue-btn">▶ Continue Learning</button>
-        <button class="btn green" id="adv-btn">🌳 Adventure Mode</button>
+        <button class="btn green" id="proj-btn">🚀 Try a Project</button>
         <button class="btn amber" id="rename-btn">✏️ Change Name</button>
         <button class="btn danger" id="reset-btn">🔄 Reset Progress</button>
       </div>
@@ -169,9 +161,9 @@ function showHome() {
     const idx = CHAPTERS.findIndex((ch, i) => ch.puzzles.some((_, j) => !progress.solved.includes(`${i}-${j}`)));
     showChapter(idx >= 0 ? idx : 0);
   };
-  document.getElementById("adv-btn").onclick = () => {
-    const idx = ADV_LEVELS.findIndex(lv => !progress.adv_solved.includes(lv.id));
-    showAdventure(idx >= 0 ? idx : 0);
+  document.getElementById("proj-btn").onclick = () => {
+    const idx = PROJECTS.findIndex(p => !progress.projects_done.includes(p.id));
+    showProject(idx >= 0 ? idx : 0);
   };
   document.getElementById("rename-btn").onclick = showWelcome;
   document.getElementById("reset-btn").onclick = confirmReset;
@@ -189,7 +181,7 @@ function confirmReset() {
       <p><b>This will erase ALL your progress:</b></p>
       <ul class="reset-list">
         <li>All ⭐ stars will be gone</li>
-        <li>All 🏅 badges will be gone</li>
+        <li>All 🚀 finished projects will be gone</li>
         <li>You will go back to 0%</li>
       </ul>
       <p class="modal-hint" style="margin-top:0">Your name and start date will stay.</p>
@@ -201,7 +193,7 @@ function confirmReset() {
   document.getElementById("reset-cancel").onclick = closeModal;
   document.getElementById("reset-confirm").onclick = () => {
     progress.solved = [];
-    progress.adv_solved = [];
+    progress.projects_done = [];
     progress.stars = 0;
     progress.last = new Date().toDateString();
     saveProgress();
@@ -380,7 +372,7 @@ async function runPuzzle() {
   out.className = "output-box";
   out.textContent = "Running…";
 
-  const result = await runPython(editor.value, null);
+  const result = await runPython(editor.value);
   runBtn.disabled = false; runBtn.textContent = "▶ Run";
 
   if (result.error) {
@@ -414,193 +406,102 @@ async function runPuzzle() {
   }
 }
 
-// ---------- Hint / quiz popup ----------
 function closeModal() {
   const modal = document.getElementById("modal");
   modal.classList.add("hidden");
   modal.innerHTML = "";
 }
 
-// ---------- Adventure mode ----------
-function showAdventure(i) {
-  view.mode = "adventure"; view.advIndex = i;
+// ---------- Projects ----------
+function showProject(i) {
+  view.mode = "project"; view.projIndex = i;
+  renderProject();
   highlightRail();
-  if (!adventureUnlocked()) { renderAdventureLocked(); return; }
-  renderAdventure();
 }
 
-function renderAdventureLocked() {
-  const pct = lessonPercent();
-  const donePz = new Set(progress.solved).size;
+function renderProject() {
+  const p = PROJECTS[view.projIndex];
   const main = document.getElementById("main");
+  const done = progress.projects_done.includes(p.id);
+
   main.innerHTML = `
     <div class="lesson-wrap">
-      <div class="lock-card">
-        <div class="lock-emoji">🔒</div>
-        <h1>Adventure Mode is locked!</h1>
-        <p class="sub">Finish your lessons first to unlock the game worlds. 🌳🚀</p>
-        <div class="lock-pct">You need 90% of lessons. You are at ${pct}% (${donePz} / ${TOTAL_PUZZLES} exercises).</div>
-        <div class="progress-bar lock-bar"><div class="progress-fill" style="width:${pct}%;background:${pct >= 90 ? "var(--mint)" : "var(--sun)"}"></div></div>
-        <button class="btn primary" id="lock-continue-btn">▶ Continue Learning</button>
-      </div>
-    </div>`;
-  document.getElementById("lock-continue-btn").onclick = () => {
-    const idx = CHAPTERS.findIndex((ch, i) => ch.puzzles.some((_, j) => !progress.solved.includes(`${i}-${j}`)));
-    showChapter(idx >= 0 ? idx : 0);
-  };
-}
-
-function renderAdventure() {
-  const lv = ADV_LEVELS[view.advIndex];
-  const theme = THEMES[lv.theme || "forest"];
-  const main = document.getElementById("main");
-
-  main.innerHTML = `
-    <div class="adv-wrap">
       <div class="lesson-head">
-        <h1>${lv.emoji} ${lv.id} — ${escapeHtml(lv.title)}</h1>
+        <h1>${p.emoji} ${escapeHtml(p.title)}${done ? " ✓" : ""}</h1>
       </div>
-      <div class="adv-mission">
-        ${lv.mission.map(l => `<div class="mission-line ${/^\s{2,}|^[a-zA-Z_]+\(|^for |^if |^   /.test(l) ? "mission-code" : ""}">${escapeHtml(l)}</div>`).join("")}
-      </div>
-      <div class="adv-stage">
-        <div class="adv-left">
-          <div class="adv-tools">${lv.tools.map(t => `<span class="tool-chip">${escapeHtml(t)}</span>`).join("")}</div>
-          <textarea id="adv-editor" class="code-editor" spellcheck="false">${escapeHtml(lv.starter)}</textarea>
-          <div class="puzzle-actions">
-            <button class="btn primary" id="adv-run-btn">▶ Run</button>
-            <div class="spacer"></div>
-            <button class="btn small" id="adv-prev-btn" ${view.advIndex === 0 ? "disabled" : ""}>← Prev</button>
-            <button class="btn small" id="adv-next-btn" ${view.advIndex === ADV_LEVELS.length - 1 ? "disabled" : ""}>Next →</button>
+      <div class="lesson-stage">
+        <div class="lesson-left">
+          <div class="theory-card">
+            <div class="theory-line">${escapeHtml(p.blurb)}</div>
+            <div class="theory-line" style="margin-top:8px"><b>You'll practice:</b> ${p.learn.map(escapeHtml).join(", ")}</div>
+          </div>
+          <div class="puzzle-card">
+            <div class="puzzle-prompt">Finish the code below. Click ▶ Run whenever you want to test it — input() will pop up a real prompt box.</div>
+            <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false">${escapeHtml(p.starter)}</textarea>
+            <div class="puzzle-actions">
+              <button class="btn primary" id="proj-run-btn">▶ Run</button>
+              <button class="btn green" id="proj-done-btn">${done ? "✓ Marked Complete" : "✅ Mark Complete"}</button>
+              <div class="spacer"></div>
+              <button class="btn small" id="proj-prev-btn" ${view.projIndex === 0 ? "disabled" : ""}>← Prev</button>
+              <button class="btn small" id="proj-next-btn" ${view.projIndex === PROJECTS.length - 1 ? "disabled" : ""}>Next →</button>
+            </div>
+            <div id="proj-output" class="output-box empty">Press ▶ Run to see your output here.</div>
           </div>
         </div>
-        <div class="adv-right">
-          <canvas id="adv-canvas" width="360" height="360"></canvas>
-          <div id="adv-output" class="output-box empty">Press ▶ Run to send your hero!</div>
+        <div class="side-panel">
+          <div class="side-head">💡 Tips</div>
+          <p class="modal-hint">This is an open project — there's no single right answer! Follow the TODOs, run often, and tinker until it works the way you want.</p>
+          <p class="modal-hint">Stuck? Break it into one small step at a time — get one TODO printing something before moving to the next.</p>
         </div>
       </div>
     </div>`;
 
-  drawGrid(lv, { x: lv.start[0], y: lv.start[1], dir: lv.start[2], trees: new Set(lv.trees.map(([x, y]) => x + "," + y)), gems: new Set(lv.gems.map(([x, y]) => x + "," + y)), collected: 0, painted: {} });
+  document.getElementById("proj-run-btn").onclick = runProject;
+  document.getElementById("proj-done-btn").onclick = markProjectDone;
+  document.getElementById("proj-prev-btn").onclick = () => { if (view.projIndex > 0) showProject(view.projIndex - 1); };
+  document.getElementById("proj-next-btn").onclick = () => { if (view.projIndex < PROJECTS.length - 1) showProject(view.projIndex + 1); };
 
-  document.getElementById("adv-run-btn").onclick = runAdventure;
-  document.getElementById("adv-prev-btn").onclick = () => { if (view.advIndex > 0) showAdventure(view.advIndex - 1); };
-  document.getElementById("adv-next-btn").onclick = () => { if (view.advIndex < ADV_LEVELS.length - 1) showAdventure(view.advIndex + 1); };
-
-  const editor = document.getElementById("adv-editor");
+  const editor = document.getElementById("proj-editor");
   editor.addEventListener("keydown", e => {
     if (e.key === "Tab") { e.preventDefault(); insertAtCursor(editor, "    "); }
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runAdventure();
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runProject();
   });
 }
 
-function drawGrid(lv, frame) {
-  const theme = THEMES[lv.theme || "forest"];
-  const canvas = document.getElementById("adv-canvas");
-  const ctx = canvas.getContext("2d");
-  const size = canvas.width / GRID;
-
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
-      ctx.fillStyle = (x + y) % 2 === 0 ? theme.bg1 : theme.bg2;
-      ctx.fillRect(x * size, y * size, size, size);
-    }
-  }
-
-  const wallSet = new Set(lv.walls.map(([x, y]) => x + "," + y));
-  wallSet.forEach(k => {
-    const [x, y] = k.split(",").map(Number);
-    ctx.fillStyle = theme.wall;
-    ctx.fillRect(x * size, y * size, size, size);
-  });
-
-  Object.entries(frame.painted).forEach(([k, color]) => {
-    const [x, y] = k.split(",").map(Number);
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.55;
-    ctx.fillRect(x * size, y * size, size, size);
-    ctx.globalAlpha = 1;
-  });
-
-  ctx.strokeStyle = theme.grid;
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= GRID; i++) {
-    ctx.beginPath(); ctx.moveTo(i * size, 0); ctx.lineTo(i * size, canvas.height); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i * size); ctx.lineTo(canvas.width, i * size); ctx.stroke();
-  }
-
-  if (lv.flag) {
-    ctx.font = `${size * 0.6}px serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(theme.flag, lv.flag[0] * size + size / 2, lv.flag[1] * size + size / 2);
-  }
-  frame.trees.forEach(k => {
-    const [x, y] = k.split(",").map(Number);
-    ctx.font = `${size * 0.6}px serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(theme.tree, x * size + size / 2, y * size + size / 2);
-  });
-  frame.gems.forEach(k => {
-    const [x, y] = k.split(",").map(Number);
-    ctx.font = `${size * 0.5}px serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(theme.gem, x * size + size / 2, y * size + size / 2);
-  });
-
-  const rot = { right: 0, down: 90, left: 180, up: 270 }[frame.dir] || 0;
-  ctx.save();
-  ctx.translate(frame.x * size + size / 2, frame.y * size + size / 2);
-  ctx.rotate((rot * Math.PI) / 180);
-  ctx.font = `${size * 0.65}px serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(theme.hero, 0, 0);
-  ctx.restore();
-}
-
-async function runAdventure() {
-  const lv = ADV_LEVELS[view.advIndex];
-  const editor = document.getElementById("adv-editor");
-  const out = document.getElementById("adv-output");
-  const runBtn = document.getElementById("adv-run-btn");
+async function runProject() {
+  const editor = document.getElementById("proj-editor");
+  const out = document.getElementById("proj-output");
+  const runBtn = document.getElementById("proj-run-btn");
   runBtn.disabled = true; runBtn.textContent = "Running…";
-  out.className = "output-box"; out.textContent = "Running…";
+  out.className = "output-box";
+  out.textContent = "Running…";
 
-  const engine = new HeroEngine(lv);
-  const result = await runPython(editor.value, engine);
+  const result = await runPython(editor.value);
   runBtn.disabled = false; runBtn.textContent = "▶ Run";
 
-  // Replay frames on the canvas.
-  let fi = 0;
-  const timer = setInterval(() => {
-    if (fi >= engine.frames.length) {
-      clearInterval(timer);
-      finishAdventure(lv, engine, result, out);
-      return;
-    }
-    drawGrid(lv, engine.frames[fi]);
-    fi++;
-  }, 220);
-}
-
-function finishAdventure(lv, engine, result, out) {
   if (result.error) {
     out.className = "output-box bad";
-    out.textContent = `Oops! Little bug: ${result.error}\n💡 Fix it and press ▶ Run again.`;
+    out.textContent = `Oops! Little bug: ${result.error}\n💡 Check your spelling and indentation, then try again!`;
     return;
   }
-  const solved = lv.check(engine);
-  if (solved) {
-    const first = !progress.adv_solved.includes(lv.id);
-    if (first) {
-      progress.adv_solved.push(lv.id);
-      saveProgress();
-      refreshStats();
-      buildRail();
-      highlightRail();
-    }
-    out.className = "output-box good";
-    out.textContent = `🏅 MISSION COMPLETE! ${first ? "New badge earned!" : "Nice!"}  Press Next → for the next adventure.`;
-  } else {
-    out.className = "output-box warn";
-    out.textContent = "🤏 Not quite there yet! Look at where the hero stopped, fix your code, and press ▶ Run again.";
+  const shown = result.output.trim() || "(nothing printed yet — add some print() calls!)";
+  out.className = "output-box good";
+  out.textContent = `Output:\n${shown}`;
+}
+
+function markProjectDone() {
+  const p = PROJECTS[view.projIndex];
+  const first = !progress.projects_done.includes(p.id);
+  if (first) {
+    progress.projects_done.push(p.id);
+    progress.stars += 1;
+    progress.last = new Date().toDateString();
+    saveProgress();
+    refreshStats();
+    buildRail();
+    highlightRail();
   }
+  renderProject();
 }
 
 // ---------- Boot ----------
