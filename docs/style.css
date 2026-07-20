@@ -164,13 +164,13 @@ body{
 }
 
 /* ---------- lesson ---------- */
-.lesson-wrap{ max-width: 1080px; margin: 0; padding: 28px; }
+.lesson-wrap{ max-width: 1400px; margin: 0; padding: 28px; }
 .adv-wrap{ max-width: 760px; margin: 0 auto; padding: 28px; }
 .lesson-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
 .lesson-head h1{ font-size: 22px; margin: 0; }
 .lesson-head-actions{ display: flex; align-items: center; gap: 8px; }
 
-.lesson-stage{ display: grid; grid-template-columns: 1fr 480px; gap: 22px; align-items: start; }
+.lesson-stage{ display: grid; grid-template-columns: 1fr 640px; gap: 22px; align-items: start; }
 .lesson-left{ min-width: 0; }
 .side-panel{
   position: sticky; top: 20px;
