@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Python Pals — Learn to Code!</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 font-size=%2280%22><text y=%2270%22>🐍</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="boot-overlay" class="boot-overlay">
+    <div class="boot-card">
+      <div class="boot-emoji">🐍</div>
+      <div class="boot-title">Python Pals</div>
+      <div id="boot-status" class="boot-status">Starting up…</div>
+      <div class="boot-bar"><div class="boot-bar-fill"></div></div>
+      <div class="boot-note">First load downloads the Python engine (~10&nbsp;MB) and caches it in your browser — every visit after this is instant.</div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal hidden"></div>
+
+  <header class="titlebar">
+    <div class="brand">🐍 Python Pals</div>
+    <button class="home-link" id="home-link">🏠 Home</button>
+    <div class="spacer"></div>
+    <div class="chip" id="badge-count">🏅 0 badges</div>
+    <div class="chip amber" id="star-count">⭐ 0 stars</div>
+  </header>
+
+  <div class="body">
+    <nav id="rail" class="rail"></nav>
+    <main id="main" class="main"></main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+  <script src="data.js"></script>
+  <script src="adventure-data.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.getElementById("home-link").onclick = () => { if (typeof showHome === "function" && progress.name) showHome(); };
+  </script>
+</body>
+</html>
