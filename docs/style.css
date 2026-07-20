@@ -170,7 +170,7 @@ body{
 .lesson-head h1{ font-size: 22px; margin: 0; }
 .lesson-head-actions{ display: flex; align-items: center; gap: 8px; }
 
-.lesson-stage{ display: grid; grid-template-columns: 1fr 340px; gap: 22px; align-items: start; }
+.lesson-stage{ display: grid; grid-template-columns: 1fr 480px; gap: 22px; align-items: start; }
 .lesson-left{ min-width: 0; }
 .side-panel{
   position: sticky; top: 20px;
