@@ -25,7 +25,7 @@ function saveProgress() {
 
 let progress = loadProgress();
 let pyodideReady = null;
-let view = { mode: "welcome", chIndex: 0, pzIndex: 0, projIndex: 0, projStage: 0 };
+let view = { mode: "welcome", chIndex: 0, pzIndex: 0, projIndex: 0 };
 
 // ---------- Pyodide bootstrap ----------
 async function initPyodide() {
@@ -413,139 +413,69 @@ function closeModal() {
 }
 
 // ---------- Projects ----------
-// Each project walks through stages: 0 = problem statement,
-// 1..N = numbered steps, N+1 = the code editor itself.
+// Split layout: every step stacked top-to-bottom on the left (problem
+// statement first, then Step 1, Step 2, ... in order), one big always-
+// visible code editor on the right.
 function showProject(i) {
-  view.mode = "project"; view.projIndex = i; view.projStage = 0;
+  view.mode = "project"; view.projIndex = i;
   renderProject();
   highlightRail();
 }
 
-function projectStageCount(p) { return p.steps.length + 2; } // problem + steps + code
-
-function gotoProjectStage(delta) {
-  const p = PROJECTS[view.projIndex];
-  const next = view.projStage + delta;
-  if (next < 0 || next >= projectStageCount(p)) return;
-  view.projStage = next;
-  renderProject();
-}
-
 function renderProject() {
   const p = PROJECTS[view.projIndex];
-  const stage = view.projStage;
-  const lastStage = projectStageCount(p) - 1;
   const main = document.getElementById("main");
   const done = progress.projects_done.includes(p.id);
+  const idx = view.projIndex;
 
   main.innerHTML = `
     <div class="lesson-wrap">
       <div class="lesson-head">
         <h1>${p.emoji} ${escapeHtml(p.title)}${done ? " ✓" : ""}</h1>
-      </div>
-      <div class="level-map">${levelMapHtml(p, stage)}</div>
-      <div class="lesson-stage">
-        <div class="lesson-left">
-          ${stage === 0 ? renderProblemStage(p) : stage === lastStage ? renderCodeStage(p, done) : renderStepStage(p, stage)}
+        <div class="lesson-head-actions">
+          <button class="btn small" id="proj-prev-btn" ${idx === 0 ? "disabled" : ""}>← Prev project</button>
+          <button class="btn small" id="proj-next-btn" ${idx === PROJECTS.length - 1 ? "disabled" : ""}>Next project →</button>
         </div>
-        <div class="side-panel">
-          <div class="side-head">${stage === 0 ? "🧠 What you'll practice" : stage === lastStage ? "💡 Tips" : "🗺 Where you are"}</div>
-          ${stage === 0
-            ? `<p class="modal-hint">${p.learn.map(escapeHtml).join(", ")}</p>`
-            : stage === lastStage
-              ? `<p class="modal-hint">This is an open project — there's no single right answer! Follow the TODOs, run often, and tinker until it works the way you want.</p>
-                 <p class="modal-hint">Stuck? Click back through the levels above to re-read the plan.</p>`
-              : `<p class="modal-hint">Level ${stage} of ${p.steps.length}. Read it, then hit the button when you're ready — you'll write the real code once every level is cleared.</p>`}
+      </div>
+      <div class="proj-split">
+        <div class="proj-steps">
+          <div class="theory-card">
+            <div class="level-badge">📋 Problem Statement</div>
+            <div class="theory-line" style="margin-top:8px">${escapeHtml(p.problem)}</div>
+          </div>
+          ${p.steps.map((s, i) => `
+            <div class="theory-card">
+              <div class="level-badge">STEP ${i + 1} <span class="level-badge-of">of ${p.steps.length}</span></div>
+              <div class="side-head" style="margin-top:10px">${escapeHtml(s.title)}</div>
+              <div class="theory-line">${escapeHtml(s.text)}</div>
+            </div>`).join("")}
+          <div class="theory-card proj-practice">
+            <div class="level-badge trophy-badge">🧠 What you'll practice</div>
+            <div class="theory-line" style="margin-top:8px">${p.learn.map(escapeHtml).join(", ")}</div>
+          </div>
+        </div>
+        <div class="proj-code">
+          <div class="puzzle-prompt">Finish the code, step by step. Click ▶ Run any time — input() will pop up a real prompt box.</div>
+          <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false">${escapeHtml(p.starter)}</textarea>
+          <div class="puzzle-actions">
+            <button class="btn primary" id="proj-run-btn">▶ Run</button>
+            <button class="btn green" id="proj-done-btn">${done ? "✓ Marked Complete" : "✅ Mark Complete"}</button>
+          </div>
+          <div id="proj-output" class="output-box empty">Press ▶ Run to see your output here.</div>
         </div>
       </div>
     </div>`;
 
-  const prevBtn = document.getElementById("proj-prev-btn");
-  const nextBtn = document.getElementById("proj-next-btn");
-  if (prevBtn) prevBtn.onclick = () => gotoProjectStage(-1);
-  if (nextBtn) nextBtn.onclick = () => gotoProjectStage(1);
+  document.getElementById("proj-prev-btn").onclick = () => { if (idx > 0) showProject(idx - 1); };
+  document.getElementById("proj-next-btn").onclick = () => { if (idx < PROJECTS.length - 1) showProject(idx + 1); };
+  document.getElementById("proj-run-btn").onclick = runProject;
+  document.getElementById("proj-done-btn").onclick = markProjectDone;
 
-  main.querySelectorAll(".level-node[data-stage]").forEach(node => {
-    const target = Number(node.dataset.stage);
-    if (target <= stage) node.onclick = () => { view.projStage = target; renderProject(); };
+  const editor = document.getElementById("proj-editor");
+  editor.addEventListener("keydown", e => {
+    if (e.key === "Tab") { e.preventDefault(); insertAtCursor(editor, "    "); }
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runProject();
   });
-
-  if (stage === lastStage) {
-    document.getElementById("proj-run-btn").onclick = runProject;
-    document.getElementById("proj-done-btn").onclick = markProjectDone;
-    const editor = document.getElementById("proj-editor");
-    editor.addEventListener("keydown", e => {
-      if (e.key === "Tab") { e.preventDefault(); insertAtCursor(editor, "    "); }
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runProject();
-    });
-  }
-}
-
-// A game-style level map: 🚩 start -> numbered level circles -> 🏆 code.
-// Cleared levels show a check, the current one pulses, later ones look
-// locked (greyed) until you actually reach them via Next.
-function levelMapHtml(p, stage) {
-  const total = projectStageCount(p); // problem(0) + steps(1..N) + code(N+1)
-  let html = "";
-  for (let i = 0; i < total; i++) {
-    const state = i < stage ? "done" : i === stage ? "current" : "upcoming";
-    const isStart = i === 0;
-    const isCode = i === total - 1;
-    const label = isStart ? "🚩" : isCode ? "🏆" : state === "done" ? "✓" : String(i);
-    html += `<button type="button" class="level-node ${state}${isCode ? " trophy" : ""}" data-stage="${i}" ${state === "upcoming" ? "disabled" : ""} title="${isStart ? "Start" : isCode ? "Code it!" : "Level " + i}">${label}</button>`;
-    if (i < total - 1) html += `<span class="level-connector ${i < stage ? "done" : ""}"></span>`;
-  }
-  return html;
-}
-
-function projectNavRow(prevLabel, nextLabel, prevDisabled) {
-  return `
-    <div class="puzzle-actions">
-      <button class="btn small" id="proj-prev-btn" ${prevDisabled ? "disabled" : ""}>${prevLabel}</button>
-      <div class="spacer"></div>
-      <button class="btn primary" id="proj-next-btn">${nextLabel}</button>
-    </div>`;
-}
-
-function renderProblemStage(p) {
-  return `
-    <div class="theory-card level-card">
-      <div class="level-badge">🚩 START</div>
-      <div class="theory-line" style="margin-top:8px">${escapeHtml(p.problem)}</div>
-    </div>
-    <div class="puzzle-card">
-      ${projectNavRow("← Prev", `Let's go! →`, true)}
-    </div>`;
-}
-
-function renderStepStage(p, stage) {
-  const step = p.steps[stage - 1];
-  const isLast = stage === p.steps.length;
-  return `
-    <div class="theory-card level-card">
-      <div class="level-badge">LEVEL ${stage} <span class="level-badge-of">of ${p.steps.length}</span></div>
-      <div class="side-head" style="margin-top:10px">${escapeHtml(step.title)}</div>
-      <div class="theory-line">${escapeHtml(step.text)}</div>
-    </div>
-    <div class="puzzle-card">
-      ${projectNavRow("← Prev", isLast ? "✅ Got it — let's code! 🏆" : "✅ Got it — next level →", false)}
-    </div>`;
-}
-
-function renderCodeStage(p, done) {
-  return `
-    <div class="puzzle-card">
-      <div class="level-badge trophy-badge">🏆 FINAL LEVEL — CODE IT!</div>
-      <div class="puzzle-prompt">Finish the code below. Click ▶ Run whenever you want to test it — input() will pop up a real prompt box.</div>
-      <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false">${escapeHtml(p.starter)}</textarea>
-      <div class="puzzle-actions">
-        <button class="btn small" id="proj-prev-btn">← Prev</button>
-        <button class="btn primary" id="proj-run-btn">▶ Run</button>
-        <button class="btn green" id="proj-done-btn">${done ? "✓ Marked Complete" : "✅ Mark Complete"}</button>
-        <div class="spacer"></div>
-      </div>
-      <div id="proj-output" class="output-box empty">Press ▶ Run to see your output here.</div>
-    </div>`;
 }
 
 async function runProject() {
