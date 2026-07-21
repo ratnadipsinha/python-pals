@@ -25,7 +25,7 @@ function saveProgress() {
 
 let progress = loadProgress();
 let pyodideReady = null;
-let view = { mode: "welcome", chIndex: 0, pzIndex: 0, projIndex: 0 };
+let view = { mode: "welcome", chIndex: 0, pzIndex: 0, projIndex: 0, projStage: 0 };
 
 // ---------- Pyodide bootstrap ----------
 async function initPyodide() {
@@ -413,14 +413,28 @@ function closeModal() {
 }
 
 // ---------- Projects ----------
+// Each project walks through stages: 0 = problem statement,
+// 1..N = numbered steps, N+1 = the code editor itself.
 function showProject(i) {
-  view.mode = "project"; view.projIndex = i;
+  view.mode = "project"; view.projIndex = i; view.projStage = 0;
   renderProject();
   highlightRail();
 }
 
+function projectStageCount(p) { return p.steps.length + 2; } // problem + steps + code
+
+function gotoProjectStage(delta) {
+  const p = PROJECTS[view.projIndex];
+  const next = view.projStage + delta;
+  if (next < 0 || next >= projectStageCount(p)) return;
+  view.projStage = next;
+  renderProject();
+}
+
 function renderProject() {
   const p = PROJECTS[view.projIndex];
+  const stage = view.projStage;
+  const lastStage = projectStageCount(p) - 1;
   const main = document.getElementById("main");
   const done = progress.projects_done.includes(p.id);
 
@@ -428,44 +442,94 @@ function renderProject() {
     <div class="lesson-wrap">
       <div class="lesson-head">
         <h1>${p.emoji} ${escapeHtml(p.title)}${done ? " ✓" : ""}</h1>
+        <div class="proj-stage-track">${projectStageDots(p, stage)}</div>
       </div>
       <div class="lesson-stage">
         <div class="lesson-left">
-          <div class="theory-card">
-            <div class="theory-line">${escapeHtml(p.blurb)}</div>
-            <div class="theory-line" style="margin-top:8px"><b>You'll practice:</b> ${p.learn.map(escapeHtml).join(", ")}</div>
-          </div>
-          <div class="puzzle-card">
-            <div class="puzzle-prompt">Finish the code below. Click ▶ Run whenever you want to test it — input() will pop up a real prompt box.</div>
-            <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false">${escapeHtml(p.starter)}</textarea>
-            <div class="puzzle-actions">
-              <button class="btn primary" id="proj-run-btn">▶ Run</button>
-              <button class="btn green" id="proj-done-btn">${done ? "✓ Marked Complete" : "✅ Mark Complete"}</button>
-              <div class="spacer"></div>
-              <button class="btn small" id="proj-prev-btn" ${view.projIndex === 0 ? "disabled" : ""}>← Prev</button>
-              <button class="btn small" id="proj-next-btn" ${view.projIndex === PROJECTS.length - 1 ? "disabled" : ""}>Next →</button>
-            </div>
-            <div id="proj-output" class="output-box empty">Press ▶ Run to see your output here.</div>
-          </div>
+          ${stage === 0 ? renderProblemStage(p) : stage === lastStage ? renderCodeStage(p, done) : renderStepStage(p, stage)}
         </div>
         <div class="side-panel">
-          <div class="side-head">💡 Tips</div>
-          <p class="modal-hint">This is an open project — there's no single right answer! Follow the TODOs, run often, and tinker until it works the way you want.</p>
-          <p class="modal-hint">Stuck? Break it into one small step at a time — get one TODO printing something before moving to the next.</p>
+          <div class="side-head">${stage === 0 ? "🧠 What you'll practice" : stage === lastStage ? "💡 Tips" : "🗺 Where you are"}</div>
+          ${stage === 0
+            ? `<p class="modal-hint">${p.learn.map(escapeHtml).join(", ")}</p>`
+            : stage === lastStage
+              ? `<p class="modal-hint">This is an open project — there's no single right answer! Follow the TODOs, run often, and tinker until it works the way you want.</p>
+                 <p class="modal-hint">Stuck? Scroll back through the steps with ← Prev to re-read the plan.</p>`
+              : `<p class="modal-hint">Step ${stage} of ${p.steps.length}. Read it, then press Next when you understand the idea — you'll write the actual code on the last screen.</p>`}
         </div>
       </div>
     </div>`;
 
-  document.getElementById("proj-run-btn").onclick = runProject;
-  document.getElementById("proj-done-btn").onclick = markProjectDone;
-  document.getElementById("proj-prev-btn").onclick = () => { if (view.projIndex > 0) showProject(view.projIndex - 1); };
-  document.getElementById("proj-next-btn").onclick = () => { if (view.projIndex < PROJECTS.length - 1) showProject(view.projIndex + 1); };
+  const prevBtn = document.getElementById("proj-prev-btn");
+  const nextBtn = document.getElementById("proj-next-btn");
+  if (prevBtn) prevBtn.onclick = () => gotoProjectStage(-1);
+  if (nextBtn) nextBtn.onclick = () => gotoProjectStage(1);
 
-  const editor = document.getElementById("proj-editor");
-  editor.addEventListener("keydown", e => {
-    if (e.key === "Tab") { e.preventDefault(); insertAtCursor(editor, "    "); }
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runProject();
-  });
+  if (stage === lastStage) {
+    document.getElementById("proj-run-btn").onclick = runProject;
+    document.getElementById("proj-done-btn").onclick = markProjectDone;
+    const editor = document.getElementById("proj-editor");
+    editor.addEventListener("keydown", e => {
+      if (e.key === "Tab") { e.preventDefault(); insertAtCursor(editor, "    "); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runProject();
+    });
+  }
+}
+
+function projectStageDots(p, stage) {
+  const total = projectStageCount(p);
+  let dots = "";
+  for (let i = 0; i < total; i++) {
+    dots += `<span class="stage-dot${i === stage ? " active" : ""}${i < stage ? " past" : ""}"></span>`;
+  }
+  return dots;
+}
+
+function projectNavRow(prevLabel, nextLabel, prevDisabled) {
+  return `
+    <div class="puzzle-actions">
+      <button class="btn small" id="proj-prev-btn" ${prevDisabled ? "disabled" : ""}>${prevLabel}</button>
+      <div class="spacer"></div>
+      <button class="btn primary" id="proj-next-btn">${nextLabel}</button>
+    </div>`;
+}
+
+function renderProblemStage(p) {
+  return `
+    <div class="theory-card">
+      <div class="side-head" style="margin-bottom:8px">📋 Problem Statement</div>
+      <div class="theory-line">${escapeHtml(p.problem)}</div>
+    </div>
+    <div class="puzzle-card">
+      ${projectNavRow("← Prev", `See the steps →`, true)}
+    </div>`;
+}
+
+function renderStepStage(p, stage) {
+  const step = p.steps[stage - 1];
+  return `
+    <div class="theory-card">
+      <div class="side-head" style="margin-bottom:8px">Step ${stage} of ${p.steps.length}: ${escapeHtml(step.title)}</div>
+      <div class="theory-line">${escapeHtml(step.text)}</div>
+    </div>
+    <div class="puzzle-card">
+      ${projectNavRow("← Prev", stage === p.steps.length ? "Let's code! →" : "Next step →", false)}
+    </div>`;
+}
+
+function renderCodeStage(p, done) {
+  return `
+    <div class="puzzle-card">
+      <div class="puzzle-prompt">Finish the code below. Click ▶ Run whenever you want to test it — input() will pop up a real prompt box.</div>
+      <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false">${escapeHtml(p.starter)}</textarea>
+      <div class="puzzle-actions">
+        <button class="btn small" id="proj-prev-btn">← Prev</button>
+        <button class="btn primary" id="proj-run-btn">▶ Run</button>
+        <button class="btn green" id="proj-done-btn">${done ? "✓ Marked Complete" : "✅ Mark Complete"}</button>
+        <div class="spacer"></div>
+      </div>
+      <div id="proj-output" class="output-box empty">Press ▶ Run to see your output here.</div>
+    </div>`;
 }
 
 async function runProject() {
