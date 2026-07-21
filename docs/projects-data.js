@@ -1,25 +1,104 @@
-// Interactive Python projects for kids — ideas adapted from
-// geeksforgeeks.org/python/python-projects-beginner-to-advanced/
-// (Number Guessing Game, Rock Paper Scissors, Fun Fact Generator,
-// Simple Calculator, Hangman, Attendance Tracker). All are text-based
-// so they run in the browser via Pyodide, with input() bridged to a
-// real prompt() dialog for genuine interactivity.
-//
-// Each project is a walkthrough: 1) problem statement, 2) numbered
-// steps to follow, 3) a code stage with a scaffold to finish.
+// Interactive Python projects for 8-year-old coders. Loosely inspired by
+// geeksforgeeks.org/python/python-projects-beginner-to-advanced/, simplified
+// in language and scope, and ordered easiest -> hardest to match what a kid
+// would have already learned in the chapters (print/strings, then numbers,
+// then lists, then loops). All are text-based so they run in the browser
+// via Pyodide, with input() bridged to a real prompt() dialog.
 window.PP_PROJECTS = [
   {
     id: "P1",
-    title: "Number Guessing Game",
-    emoji: "🎯",
-    learn: ["random.randint()", "while loops", "if / elif / else", "input() and int()"],
-    problem: "The computer secretly picks a number between 1 and 20. Your program must let the player guess again and again — saying \"Too high!\" or \"Too low!\" — until they guess it exactly. Then print how many tries it took.",
+    title: "Project 1: Greeting Card",
+    emoji: "🎉",
+    learn: ["print()", "input()", "joining words with +"],
+    problem: "Make a fun greeting card! Ask for the player's name, then print a big colorful hello message just for them.",
     steps: [
-      { title: "Pick the secret number", text: "Use random.randint(1, 20) and store it in a variable, e.g. secret = random.randint(1, 20)." },
-      { title: "Set up a tries counter", text: "Make a variable tries = 0 to count how many guesses the player makes." },
-      { title: "Start a loop", text: "Use a while loop that keeps going until the guess is correct — for example while True:, and break out of it once they're right." },
-      { title: "Ask for a guess", text: "Inside the loop, use guess = int(input(\"Your guess: \")) and add 1 to tries." },
-      { title: "Compare and hint", text: "If the guess is too high, print \"Too high!\". Too low, print \"Too low!\". Correct? Print how many tries it took and stop the loop." },
+      { title: "Ask for their name", text: "Use input() to ask a question:  name = input(\"What is your name? \")" },
+      { title: "Say hello", text: "Print a friendly greeting using their name, like:  print(\"Hello, \" + name + \"! 🎉\")" },
+      { title: "Add more fun", text: "Print 2 more lines for the card — a joke, a compliment, or a silly fact — and use their name again!" },
+    ],
+    starter:
+`name = input("What is your name? ")
+
+# TODO: print a big hello message using their name
+# TODO: print 2 more fun lines for the card!
+`,
+  },
+  {
+    id: "P2",
+    title: "Project 2: Lucky Number Picker",
+    emoji: "🍀",
+    learn: ["random.randint()", "print()", "variables"],
+    problem: "Give the player a lucky number for today! Pick a random number between 1 and 100 and show it to them in a fun way.",
+    steps: [
+      { title: "Pick a random number", text: "lucky = random.randint(1, 100)" },
+      { title: "Show it off", text: "Print something like:  print(\"Your lucky number today is\", lucky, \"🍀\")" },
+      { title: "Make it silly", text: "Add one more fun line — what could that lucky number mean today?" },
+    ],
+    starter:
+`import random
+
+# TODO: pick a random lucky number between 1 and 100
+# TODO: print it with a fun message
+# TODO: add one more silly line to make it fun!
+`,
+  },
+  {
+    id: "P3",
+    title: "Project 3: Silly Joke Machine",
+    emoji: "😂",
+    learn: ["lists", "random.choice()", "print()"],
+    problem: "Build a joke machine! Store some silly jokes in a list, then print a random one every time it runs.",
+    steps: [
+      { title: "Make a jokes list", text: "Write at least 4 silly jokes as strings inside a list called jokes." },
+      { title: "Pick one at random", text: "joke = random.choice(jokes)" },
+      { title: "Tell the joke", text: "Print it with something fun, like:  print(\"Here's a joke for you: \" + joke)" },
+    ],
+    starter:
+`import random
+
+jokes = [
+    "Why did the computer go to the doctor? It had a virus!",
+    "What do you call a bear with no teeth? A gummy bear!",
+    # TODO: add 2 more silly jokes of your own!
+]
+
+# TODO: pick a random joke and print it
+`,
+  },
+  {
+    id: "P4",
+    title: "Project 4: Candy Counter",
+    emoji: "🍬",
+    learn: ["lists", "for loops", "counting"],
+    problem: "You have a bag of candy to share with your friends! Ask each friend if they want a piece, then count how many you gave away.",
+    steps: [
+      { title: "Make a list of friends", text: "friends = [\"Ana\", \"Leo\", \"Mia\"]" },
+      { title: "Start a candy counter", text: "candy_given = 0" },
+      { title: "Ask each friend", text: "for friend in friends: — ask  input(friend + \", do you want candy? (y/n): \")" },
+      { title: "Count the candy", text: "If they say \"y\", add 1 to candy_given." },
+      { title: "Show the total", text: "Print how many pieces of candy you gave away in total!" },
+    ],
+    starter:
+`friends = ["Ana", "Leo", "Mia"]
+candy_given = 0
+
+# TODO: for each friend, ask if they want candy
+# TODO: if they say "y", add 1 to candy_given
+# TODO: print how many pieces of candy you gave away
+`,
+  },
+  {
+    id: "P5",
+    title: "Project 5: Guess My Number",
+    emoji: "🎯",
+    learn: ["while loops", "if / elif / else", "input() and int()"],
+    problem: "The computer secretly picks a number between 1 and 20. Keep guessing until you get it right — the computer will tell you \"Too high!\" or \"Too low!\" each time.",
+    steps: [
+      { title: "Pick the secret number", text: "secret = random.randint(1, 20)" },
+      { title: "Start a tries counter", text: "tries = 0 — this will count how many guesses you make." },
+      { title: "Guess in a loop", text: "Use while True: to keep asking  guess = int(input(\"Your guess: \"))  until it's right. Add 1 to tries each time." },
+      { title: "Give hints", text: "If the guess is too big, print \"Too high!\". Too small, print \"Too low!\"." },
+      { title: "Celebrate!", text: "When they guess it, print how many tries it took, then stop the loop with break." },
     ],
     starter:
 `import random
@@ -35,15 +114,15 @@ print("I'm thinking of a number between 1 and 20!")
 `,
   },
   {
-    id: "P2",
-    title: "Rock Paper Scissors",
+    id: "P6",
+    title: "Project 6: Rock Paper Scissors",
     emoji: "✊",
-    learn: ["random.choice()", "input()", "comparing strings", "if / elif / else"],
-    problem: "Play one round of Rock, Paper, Scissors against the computer. Ask the player to type their choice, let the computer pick randomly, then decide and print who won.",
+    learn: ["random.choice()", "input()", "if / elif / else"],
+    problem: "Play one round of Rock, Paper, Scissors against the computer. Type your choice, let the computer pick randomly, then find out who won.",
     steps: [
       { title: "Make the choices list", text: "choices = [\"rock\", \"paper\", \"scissors\"]" },
-      { title: "Get the player's choice", text: "Use input(), e.g. player = input(\"rock, paper, or scissors? \")." },
-      { title: "Get the computer's choice", text: "Use computer = random.choice(choices), and print it so the player can see what it picked." },
+      { title: "Get the player's choice", text: "player = input(\"rock, paper, or scissors? \")" },
+      { title: "Get the computer's choice", text: "computer = random.choice(choices) — print it so you can see what it picked." },
       { title: "Handle a tie", text: "If player == computer, print \"It's a tie!\" and stop there." },
       { title: "Decide the winner", text: "Check the 3 winning combos — rock beats scissors, scissors beats paper, paper beats rock — and print who won." },
     ],
@@ -57,100 +136,6 @@ choices = ["rock", "paper", "scissors"]
 # TODO: print what the computer chose
 # TODO: figure out who wins and print the result!
 #   (rock beats scissors, scissors beats paper, paper beats rock)
-`,
-  },
-  {
-    id: "P3",
-    title: "Fun Fact Generator",
-    emoji: "🎲",
-    learn: ["lists", "random.choice()", "print()"],
-    problem: "Build a little app that shows a random fun fact every time it runs.",
-    steps: [
-      { title: "Make a list of facts", text: "Write at least 5 fun facts as strings inside a list called facts." },
-      { title: "Pick one at random", text: "Use fact = random.choice(facts) to grab a single fact from the list." },
-      { title: "Print it nicely", text: "Show it with a friendly message, e.g. print(\"Did you know? \" + fact)." },
-    ],
-    starter:
-`import random
-
-facts = [
-    "Octopuses have three hearts.",
-    "Bananas are berries, but strawberries aren't.",
-    "A day on Venus is longer than its year.",
-    # TODO: add 3 more fun facts of your own!
-]
-
-# TODO: pick a random fact with random.choice(facts) and print it.
-`,
-  },
-  {
-    id: "P4",
-    title: "Simple Calculator",
-    emoji: "🧮",
-    learn: ["input()", "float()", "if / elif / else", "arithmetic operators"],
-    problem: "Ask the player for two numbers and an operator (+, -, *, /), then do the math and print the answer.",
-    steps: [
-      { title: "Get the first number", text: "a = float(input(\"First number: \"))" },
-      { title: "Get the operator", text: "op = input(\"Operator (+ - * /): \")" },
-      { title: "Get the second number", text: "b = float(input(\"Second number: \"))" },
-      { title: "Do the right math", text: "Use if/elif to check op against \"+\", \"-\", \"*\", \"/\" and calculate the answer." },
-      { title: "Print the answer", text: "Show it clearly, e.g. print(a, op, b, \"=\", answer)." },
-    ],
-    starter:
-`# TODO: ask for the first number:  a = float(input("First number: "))
-# TODO: ask for an operator:       op = input("Operator (+ - * /): ")
-# TODO: ask for the second number: b = float(input("Second number: "))
-# TODO: do the right math based on op, then print the answer.
-`,
-  },
-  {
-    id: "P5",
-    title: "Hangman (mini)",
-    emoji: "🔤",
-    learn: ["while loops", "strings", "in / not in", "counting down"],
-    problem: "Pick a secret word. The player guesses one letter at a time. Show their progress as blanks and letters, and stop after 6 wrong guesses or a fully-guessed word.",
-    steps: [
-      { title: "Set up the word and tries", text: "word = \"python\", guessed = \"\", tries = 6" },
-      { title: "Build the loop", text: "while tries > 0, keep asking for letters — you can stop early once the word is fully guessed." },
-      { title: "Take a guess", text: "letter = input(\"Guess a letter: \"), then guessed = guessed + letter." },
-      { title: "Show progress", text: "Build a string that shows each letter of word if it's in guessed, or \"_\" if not — e.g. \"p _ t h _ n\"." },
-      { title: "Lose a try on a miss", text: "If the letter isn't in word, subtract 1 from tries." },
-      { title: "End the game", text: "Print \"You win!\" if every letter was guessed, or reveal the word if tries ran out." },
-    ],
-    starter:
-`word = "python"
-guessed = ""
-tries = 6
-
-# TODO: loop while tries > 0 and you haven't guessed every letter:
-#   letter = input("Guess a letter: ")
-#   guessed = guessed + letter
-#   show the word so far, e.g. "p _ t h _ n"
-#   if the letter isn't in the word, tries = tries - 1
-# TODO: print "You win!" or "Out of tries! The word was ..." at the end.
-`,
-  },
-  {
-    id: "P6",
-    title: "Attendance Tracker",
-    emoji: "📋",
-    learn: ["lists", "for loops", "input()", "counting"],
-    problem: "You have a class list. Ask if each student is present, then print how many showed up and who they are.",
-    steps: [
-      { title: "Make the class list", text: "students = [\"Aarav\", \"Zara\", \"Ishaan\", \"Maya\"]" },
-      { title: "Make an empty list for who's present", text: "present = []" },
-      { title: "Loop through every student", text: "for name in students:" },
-      { title: "Ask and record", text: "input(name + \" here? (y/n): \") — if the answer is \"y\", add the name to present with present.append(name)." },
-      { title: "Print the summary", text: "Show how many are present out of len(students), then print the list of present students." },
-    ],
-    starter:
-`students = ["Aarav", "Zara", "Ishaan", "Maya"]
-present = []
-
-# TODO: for each name in students, ask input(name + " here? (y/n): ")
-#   if they say "y", add the name to present
-# TODO: after the loop, print how many are present out of len(students)
-# TODO: print the list of present students
 `,
   },
 ];
