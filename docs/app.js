@@ -442,8 +442,8 @@ function renderProject() {
     <div class="lesson-wrap">
       <div class="lesson-head">
         <h1>${p.emoji} ${escapeHtml(p.title)}${done ? " ✓" : ""}</h1>
-        <div class="proj-stage-track">${projectStageDots(p, stage)}</div>
       </div>
+      <div class="level-map">${levelMapHtml(p, stage)}</div>
       <div class="lesson-stage">
         <div class="lesson-left">
           ${stage === 0 ? renderProblemStage(p) : stage === lastStage ? renderCodeStage(p, done) : renderStepStage(p, stage)}
@@ -454,8 +454,8 @@ function renderProject() {
             ? `<p class="modal-hint">${p.learn.map(escapeHtml).join(", ")}</p>`
             : stage === lastStage
               ? `<p class="modal-hint">This is an open project — there's no single right answer! Follow the TODOs, run often, and tinker until it works the way you want.</p>
-                 <p class="modal-hint">Stuck? Scroll back through the steps with ← Prev to re-read the plan.</p>`
-              : `<p class="modal-hint">Step ${stage} of ${p.steps.length}. Read it, then press Next when you understand the idea — you'll write the actual code on the last screen.</p>`}
+                 <p class="modal-hint">Stuck? Click back through the levels above to re-read the plan.</p>`
+              : `<p class="modal-hint">Level ${stage} of ${p.steps.length}. Read it, then hit the button when you're ready — you'll write the real code once every level is cleared.</p>`}
         </div>
       </div>
     </div>`;
@@ -464,6 +464,11 @@ function renderProject() {
   const nextBtn = document.getElementById("proj-next-btn");
   if (prevBtn) prevBtn.onclick = () => gotoProjectStage(-1);
   if (nextBtn) nextBtn.onclick = () => gotoProjectStage(1);
+
+  main.querySelectorAll(".level-node[data-stage]").forEach(node => {
+    const target = Number(node.dataset.stage);
+    if (target <= stage) node.onclick = () => { view.projStage = target; renderProject(); };
+  });
 
   if (stage === lastStage) {
     document.getElementById("proj-run-btn").onclick = runProject;
@@ -476,13 +481,21 @@ function renderProject() {
   }
 }
 
-function projectStageDots(p, stage) {
-  const total = projectStageCount(p);
-  let dots = "";
+// A game-style level map: 🚩 start -> numbered level circles -> 🏆 code.
+// Cleared levels show a check, the current one pulses, later ones look
+// locked (greyed) until you actually reach them via Next.
+function levelMapHtml(p, stage) {
+  const total = projectStageCount(p); // problem(0) + steps(1..N) + code(N+1)
+  let html = "";
   for (let i = 0; i < total; i++) {
-    dots += `<span class="stage-dot${i === stage ? " active" : ""}${i < stage ? " past" : ""}"></span>`;
+    const state = i < stage ? "done" : i === stage ? "current" : "upcoming";
+    const isStart = i === 0;
+    const isCode = i === total - 1;
+    const label = isStart ? "🚩" : isCode ? "🏆" : state === "done" ? "✓" : String(i);
+    html += `<button type="button" class="level-node ${state}${isCode ? " trophy" : ""}" data-stage="${i}" ${state === "upcoming" ? "disabled" : ""} title="${isStart ? "Start" : isCode ? "Code it!" : "Level " + i}">${label}</button>`;
+    if (i < total - 1) html += `<span class="level-connector ${i < stage ? "done" : ""}"></span>`;
   }
-  return dots;
+  return html;
 }
 
 function projectNavRow(prevLabel, nextLabel, prevDisabled) {
@@ -496,30 +509,33 @@ function projectNavRow(prevLabel, nextLabel, prevDisabled) {
 
 function renderProblemStage(p) {
   return `
-    <div class="theory-card">
-      <div class="side-head" style="margin-bottom:8px">📋 Problem Statement</div>
-      <div class="theory-line">${escapeHtml(p.problem)}</div>
+    <div class="theory-card level-card">
+      <div class="level-badge">🚩 START</div>
+      <div class="theory-line" style="margin-top:8px">${escapeHtml(p.problem)}</div>
     </div>
     <div class="puzzle-card">
-      ${projectNavRow("← Prev", `See the steps →`, true)}
+      ${projectNavRow("← Prev", `Let's go! →`, true)}
     </div>`;
 }
 
 function renderStepStage(p, stage) {
   const step = p.steps[stage - 1];
+  const isLast = stage === p.steps.length;
   return `
-    <div class="theory-card">
-      <div class="side-head" style="margin-bottom:8px">Step ${stage} of ${p.steps.length}: ${escapeHtml(step.title)}</div>
+    <div class="theory-card level-card">
+      <div class="level-badge">LEVEL ${stage} <span class="level-badge-of">of ${p.steps.length}</span></div>
+      <div class="side-head" style="margin-top:10px">${escapeHtml(step.title)}</div>
       <div class="theory-line">${escapeHtml(step.text)}</div>
     </div>
     <div class="puzzle-card">
-      ${projectNavRow("← Prev", stage === p.steps.length ? "Let's code! →" : "Next step →", false)}
+      ${projectNavRow("← Prev", isLast ? "✅ Got it — let's code! 🏆" : "✅ Got it — next level →", false)}
     </div>`;
 }
 
 function renderCodeStage(p, done) {
   return `
     <div class="puzzle-card">
+      <div class="level-badge trophy-badge">🏆 FINAL LEVEL — CODE IT!</div>
       <div class="puzzle-prompt">Finish the code below. Click ▶ Run whenever you want to test it — input() will pop up a real prompt box.</div>
       <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false">${escapeHtml(p.starter)}</textarea>
       <div class="puzzle-actions">
