@@ -437,6 +437,20 @@ function approveStep() {
   renderProject();
 }
 
+// A row of level circles above the steps: cleared ones turn green with a
+// checkmark (pop animation on mount), the one being worked on pulses, and
+// steps not reached yet sit dimmed. Purely visual — no click navigation.
+function stepTrackHtml(p, revealed) {
+  let html = `<span class="step-node done" title="Problem Statement">🚩</span><span class="step-connector done"></span>`;
+  p.steps.forEach((s, i) => {
+    const state = i < revealed - 1 ? "done" : i === revealed - 1 ? "current" : "upcoming";
+    const label = state === "done" ? "✓" : String(i + 1);
+    html += `<span class="step-node ${state}" title="Step ${i + 1}">${label}</span>`;
+    if (i < p.steps.length - 1) html += `<span class="step-connector ${i < revealed - 1 ? "done" : ""}"></span>`;
+  });
+  return html;
+}
+
 function renderProject() {
   const p = PROJECTS[view.projIndex];
   const main = document.getElementById("main");
@@ -454,6 +468,7 @@ function renderProject() {
           <button class="btn small" id="proj-next-btn" ${idx === PROJECTS.length - 1 ? "disabled" : ""}>Next project →</button>
         </div>
       </div>
+      <div class="step-track">${stepTrackHtml(p, revealed)}</div>
       <div class="proj-split">
         <div class="proj-steps">
           <div class="theory-card">

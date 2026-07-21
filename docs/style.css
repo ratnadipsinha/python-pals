@@ -227,6 +227,45 @@ body{
 }
 .proj-practice .level-badge{ background: var(--mint); color: #053; }
 
+/* Level progress track above the steps */
+.step-track{
+  display: flex; align-items: center; margin-bottom: 18px;
+  padding: 14px 16px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; overflow-x: auto;
+}
+.step-node{
+  flex: none; width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 13px;
+  background: var(--bg); color: var(--muted); border: 2px solid var(--line);
+}
+.step-node.done{
+  background: var(--mint); color: #053; border-color: var(--mint);
+  animation: step-pop 0.5s cubic-bezier(.34,1.56,.64,1);
+}
+.step-node.current{
+  background: var(--grape); color: #fff; border-color: var(--grape);
+  transform: scale(1.2);
+  animation: step-current-pulse 1.6s ease-in-out infinite;
+}
+.step-node.upcoming{ opacity: 0.5; }
+.step-connector{ flex: 1; height: 4px; min-width: 12px; background: var(--line); }
+.step-connector.done{ background: var(--mint); transition: background 0.4s ease; }
+
+@keyframes step-pop{
+  0%{ transform: scale(0.4); }
+  60%{ transform: scale(1.25); }
+  100%{ transform: scale(1); }
+}
+@keyframes step-current-pulse{
+  0%, 100%{ box-shadow: 0 0 0 4px rgba(123,92,255,0.22); }
+  50%{ box-shadow: 0 0 0 9px rgba(123,92,255,0.08); }
+}
+@media (prefers-reduced-motion: reduce){
+  .step-node.done{ animation: none; }
+  .step-node.current{ animation: none; }
+}
+
 /* Split layout: steps stacked on the left, one big persistent editor on the right */
 .proj-split{ display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
 .proj-steps{
