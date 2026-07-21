@@ -287,6 +287,38 @@ body{
   .proj-code{ position: static; }
 }
 
+/* Calculator window widget (Project 7) */
+.calc-widget{
+  background: #17181c; border: 1px solid #000; border-radius: 14px;
+  padding: 14px; box-shadow: 0 10px 30px -12px rgba(0,0,0,0.5);
+}
+.calc-window-label{
+  color: #9aa0ab; font-size: 12px; font-weight: bold; letter-spacing: 0.06em;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.calc-screen{
+  background: #0b0c0f; color: var(--mint);
+  font-family: ui-monospace, Consolas, "Cascadia Code", monospace;
+  font-size: 30px; text-align: right; padding: 16px 14px;
+  border-radius: 10px; margin-bottom: 10px; letter-spacing: 0.02em;
+  min-height: 1.4em; overflow-x: auto; white-space: nowrap;
+}
+.calc-grid{
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 48px; gap: 8px; grid-auto-flow: row dense;
+}
+.calc-btn{
+  border: none; border-radius: 8px; background: #2a2c33; color: #f1ecfb;
+  font-size: 17px; font-weight: bold; cursor: pointer; font-family: inherit;
+}
+.calc-btn:hover{ filter: brightness(1.2); }
+.calc-btn:active{ filter: brightness(0.9); }
+.calc-op{ background: var(--grape); color: #fff; }
+.calc-clear{ background: #d32f2f; color: #fff; }
+.calc-equals{ background: var(--mint); color: #053; }
+.calc-tall{ grid-row: span 2; }
+.calc-wide{ grid-column: span 2; }
+
 /* ---------- modal (hint/quiz) ---------- */
 .modal{
   position: fixed; inset: 0; z-index: 50; background: rgba(20,10,35,0.45);

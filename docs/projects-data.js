@@ -140,22 +140,33 @@ choices = ["rock", "paper", "scissors"]
   },
   {
     id: "P7",
-    title: "Project 7: Kids Calculator",
+    title: "Project 7: Build a Calculator App",
     emoji: "🧮",
-    learn: ["input()", "int()", "if / elif / else", "arithmetic operators"],
-    problem: "Build your very own calculator! Ask for two whole numbers and what to do with them (+, -, *, /), then do the math and show the answer.",
+    calculator: true, // shows the real calculator window widget, wired to the functions below
+    learn: ["def / return", "functions with parameters", "calling functions"],
+    problem: "Build the brain of a real calculator! Write four functions — add, subtract, multiply, divide — then use the calculator window on the right to try them out with real buttons.",
     steps: [
-      { title: "Get the first number", text: "a = int(input(\"First number: \"))" },
-      { title: "Get the operation", text: "op = input(\"What do you want to do? (+ - * /): \")" },
-      { title: "Get the second number", text: "b = int(input(\"Second number: \"))" },
-      { title: "Do the right math", text: "Use if/elif to check op against \"+\", \"-\", \"*\", \"/\" and work out the answer." },
-      { title: "Show the answer", text: "Print it clearly, e.g.  print(a, op, b, \"=\", answer)" },
+      { title: "Write the add function", text: "def add(a, b):\n    return a + b" },
+      { title: "Write the subtract function", text: "def subtract(a, b):\n    return a - b" },
+      { title: "Write the multiply function", text: "def multiply(a, b):\n    return a * b" },
+      { title: "Write the divide function", text: "def divide(a, b):\n    return a / b" },
+      { title: "Test it!", text: "Once all four functions are written, press ▶ Run — then use the calculator buttons on the right to try real sums. The buttons call the functions you just wrote!" },
     ],
     starter:
-`# TODO: ask for the first number:  a = int(input("First number: "))
-# TODO: ask what to do:            op = input("What do you want to do? (+ - * /): ")
-# TODO: ask for the second number: b = int(input("Second number: "))
-# TODO: do the right math based on op, then print the answer!
+`# Write four functions below. Once you press ▶ Run, the calculator
+# window on the right will use them for real!
+
+# TODO: def add(a, b):
+#           return a + b
+
+# TODO: def subtract(a, b):
+#           ...
+
+# TODO: def multiply(a, b):
+#           ...
+
+# TODO: def divide(a, b):
+#           ...
 `,
   },
 ];

@@ -69,6 +69,41 @@ json.dumps({"output": _buf.getvalue(), "error": _err})
   return JSON.parse(resultJson);
 }
 
+// Runs code directly into Pyodide's persistent global scope (not the
+// throwaway {} namespace runPython() uses) so functions the kid defines
+// stay callable afterwards — used by the calculator widget's buttons.
+async function loadCodeIntoGlobals(code) {
+  const py = await pyodideReady;
+  py.globals.set("__pp_code", code);
+  const src = `
+_err = None
+try:
+    exec(__pp_code, globals())
+except Exception as _e:
+    _err = type(_e).__name__ + ": " + str(_e)
+_err
+`;
+  return py.runPython(src); // null on success, error string on failure
+}
+
+// Calls a zero-arg-defined kid function like add(a, b) that was loaded via
+// loadCodeIntoGlobals(). Returns {value} or {error}.
+async function callCalcFunction(name, a, b) {
+  const py = await pyodideReady;
+  const fn = py.globals.get(name);
+  if (!fn || typeof fn !== "function") {
+    return { error: `${name}() isn't ready yet — press ▶ Run first!` };
+  }
+  try {
+    const value = fn(a, b);
+    return { value };
+  } catch (e) {
+    return { error: e.message || String(e) };
+  } finally {
+    if (fn.destroy) fn.destroy();
+  }
+}
+
 // ---------- Chrome: header stats ----------
 function refreshStats() {
   document.getElementById("star-count").textContent = `⭐ ${progress.stars} stars`;
@@ -495,20 +530,23 @@ function renderProject() {
                </div>`}
         </div>
         <div class="proj-code">
-          <div class="puzzle-prompt">Finish the code, step by step. Click ▶ Run any time — input() will pop up a real prompt box.</div>
+          <div class="puzzle-prompt">${p.calculator
+            ? "Write the four functions, then press ▶ Run to wake up the calculator window below."
+            : "Finish the code, step by step. Click ▶ Run any time — input() will pop up a real prompt box."}</div>
           <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false" placeholder="Write your code here, following the steps on the left…">${escapeHtml(view.projDraft)}</textarea>
           <div class="puzzle-actions">
             <button class="btn primary" id="proj-run-btn">▶ Run</button>
             <button class="btn green" id="proj-done-btn">${done ? "✓ Marked Complete" : "✅ Mark Complete"}</button>
           </div>
           <div id="proj-output" class="output-box empty">Press ▶ Run to see your output here.</div>
+          ${p.calculator ? calculatorWidgetHtml() : ""}
         </div>
       </div>
     </div>`;
 
   document.getElementById("proj-prev-btn").onclick = () => { if (idx > 0) showProject(idx - 1); };
   document.getElementById("proj-next-btn").onclick = () => { if (idx < PROJECTS.length - 1) showProject(idx + 1); };
-  document.getElementById("proj-run-btn").onclick = runProject;
+  document.getElementById("proj-run-btn").onclick = p.calculator ? runCalculatorSetup : runProject;
   document.getElementById("proj-done-btn").onclick = markProjectDone;
   const approveBtn = document.getElementById("step-approve-btn");
   if (approveBtn) approveBtn.onclick = approveStep;
@@ -516,8 +554,116 @@ function renderProject() {
   const editor = document.getElementById("proj-editor");
   editor.addEventListener("keydown", e => {
     if (e.key === "Tab") { e.preventDefault(); insertAtCursor(editor, "    "); }
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runProject();
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") (p.calculator ? runCalculatorSetup() : runProject());
   });
+
+  if (p.calculator) initCalculatorWidget();
+}
+
+// ---------- Calculator widget (Project 7) ----------
+function calculatorWidgetHtml() {
+  return `
+    <div class="calc-widget">
+      <div class="calc-window-label">🧮 Calculator Window</div>
+      <div class="calc-screen" id="calc-screen">0</div>
+      <div class="calc-grid">
+        <button class="calc-btn calc-clear" data-key="C">C</button>
+        <button class="calc-btn calc-op" data-key="/">÷</button>
+        <button class="calc-btn calc-op" data-key="*">×</button>
+        <button class="calc-btn calc-op" data-key="-">−</button>
+        <button class="calc-btn" data-key="7">7</button>
+        <button class="calc-btn" data-key="8">8</button>
+        <button class="calc-btn" data-key="9">9</button>
+        <button class="calc-btn calc-op calc-tall" data-key="+">+</button>
+        <button class="calc-btn" data-key="4">4</button>
+        <button class="calc-btn" data-key="5">5</button>
+        <button class="calc-btn" data-key="6">6</button>
+        <button class="calc-btn" data-key="1">1</button>
+        <button class="calc-btn" data-key="2">2</button>
+        <button class="calc-btn" data-key="3">3</button>
+        <button class="calc-btn calc-equals calc-tall" data-key="=">=</button>
+        <button class="calc-btn calc-wide" data-key="0">0</button>
+        <button class="calc-btn" data-key=".">.</button>
+      </div>
+    </div>`;
+}
+
+const calcState = { display: "0", first: null, op: null, newEntry: true };
+
+function calcUpdateScreen() {
+  const screen = document.getElementById("calc-screen");
+  if (screen) screen.textContent = calcState.display;
+}
+
+function initCalculatorWidget() {
+  calcState.display = "0"; calcState.first = null; calcState.op = null; calcState.newEntry = true;
+  calcUpdateScreen();
+  document.querySelectorAll(".calc-btn").forEach(btn => {
+    btn.onclick = () => handleCalcKey(btn.dataset.key);
+  });
+}
+
+async function handleCalcKey(key) {
+  if (key === "C") {
+    calcState.display = "0"; calcState.first = null; calcState.op = null; calcState.newEntry = true;
+    calcUpdateScreen();
+    return;
+  }
+  if (key === ".") {
+    if (calcState.newEntry) { calcState.display = "0."; calcState.newEntry = false; }
+    else if (!calcState.display.includes(".")) { calcState.display += "."; }
+    calcUpdateScreen();
+    return;
+  }
+  if ("0123456789".includes(key)) {
+    calcState.display = calcState.newEntry ? key : (calcState.display === "0" ? key : calcState.display + key);
+    calcState.newEntry = false;
+    calcUpdateScreen();
+    return;
+  }
+  if (["+", "-", "*", "/"].includes(key)) {
+    calcState.first = parseFloat(calcState.display);
+    calcState.op = key;
+    calcState.newEntry = true;
+    return;
+  }
+  if (key === "=") {
+    if (calcState.first === null || !calcState.op) return;
+    const second = parseFloat(calcState.display);
+    const fnName = { "+": "add", "-": "subtract", "*": "multiply", "/": "divide" }[calcState.op];
+    calcState.display = "…";
+    calcUpdateScreen();
+    const result = await callCalcFunction(fnName, calcState.first, second);
+    if (result.error) {
+      calcState.display = "Err";
+      calcUpdateScreen();
+      const out = document.getElementById("proj-output");
+      if (out) { out.className = "output-box bad"; out.textContent = "Calculator error: " + result.error; }
+    } else {
+      calcState.display = String(result.value);
+      calcUpdateScreen();
+    }
+    calcState.first = null; calcState.op = null; calcState.newEntry = true;
+  }
+}
+
+async function runCalculatorSetup() {
+  const editor = document.getElementById("proj-editor");
+  const out = document.getElementById("proj-output");
+  const runBtn = document.getElementById("proj-run-btn");
+  runBtn.disabled = true; runBtn.textContent = "Running…";
+  out.className = "output-box"; out.textContent = "Running…";
+
+  const err = await loadCodeIntoGlobals(editor.value);
+  runBtn.disabled = false; runBtn.textContent = "▶ Run";
+
+  if (err) {
+    out.className = "output-box bad";
+    out.textContent = `Oops! Little bug: ${err}\n💡 Check your spelling and indentation, then try again!`;
+    return;
+  }
+  out.className = "output-box good";
+  out.textContent = "✅ Functions loaded! Try the calculator buttons below. 🧮";
 }
 
 async function runProject() {
