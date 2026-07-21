@@ -25,7 +25,7 @@ function saveProgress() {
 
 let progress = loadProgress();
 let pyodideReady = null;
-let view = { mode: "welcome", chIndex: 0, pzIndex: 0, projIndex: 0 };
+let view = { mode: "welcome", chIndex: 0, pzIndex: 0, projIndex: 0, projRevealed: 1, projDraft: "" };
 
 // ---------- Pyodide bootstrap ----------
 async function initPyodide() {
@@ -418,8 +418,23 @@ function closeModal() {
 // visible code editor on the right.
 function showProject(i) {
   view.mode = "project"; view.projIndex = i;
+  view.projRevealed = 1; // how many steps are unlocked so far (problem statement is always shown)
+  view.projDraft = "";   // code typed so far, preserved across re-renders when a step is approved
   renderProject();
   highlightRail();
+}
+
+// Grabs whatever's in the editor right now so approving a step (which
+// re-renders the page) doesn't wipe out code the kid already typed.
+function captureDraft() {
+  const editor = document.getElementById("proj-editor");
+  if (editor) view.projDraft = editor.value;
+}
+
+function approveStep() {
+  captureDraft();
+  view.projRevealed = Math.min(view.projRevealed + 1, PROJECTS[view.projIndex].steps.length);
+  renderProject();
 }
 
 function renderProject() {
@@ -427,6 +442,8 @@ function renderProject() {
   const main = document.getElementById("main");
   const done = progress.projects_done.includes(p.id);
   const idx = view.projIndex;
+  const revealed = view.projRevealed;
+  const remaining = p.steps.length - revealed;
 
   main.innerHTML = `
     <div class="lesson-wrap">
@@ -443,20 +460,28 @@ function renderProject() {
             <div class="level-badge">📋 Problem Statement</div>
             <div class="theory-line" style="margin-top:8px">${escapeHtml(p.problem)}</div>
           </div>
-          ${p.steps.map((s, i) => `
+          ${p.steps.slice(0, revealed).map((s, i) => {
+            const isLastRevealed = i === revealed - 1;
+            return `
             <div class="theory-card">
               <div class="level-badge">STEP ${i + 1} <span class="level-badge-of">of ${p.steps.length}</span></div>
               <div class="side-head" style="margin-top:10px">${escapeHtml(s.title)}</div>
               <div class="theory-line">${escapeHtml(s.text)}</div>
-            </div>`).join("")}
-          <div class="theory-card proj-practice">
-            <div class="level-badge trophy-badge">🧠 What you'll practice</div>
-            <div class="theory-line" style="margin-top:8px">${p.learn.map(escapeHtml).join(", ")}</div>
-          </div>
+              ${isLastRevealed && remaining > 0
+                ? `<button class="btn primary proj-approve-btn" id="step-approve-btn">✅ Got it — show next step</button>`
+                : ""}
+            </div>`;
+          }).join("")}
+          ${remaining > 0
+            ? `<div class="proj-locked-teaser">🔒 ${remaining} more step${remaining === 1 ? "" : "s"} to go</div>`
+            : `<div class="theory-card proj-practice">
+                 <div class="level-badge trophy-badge">🧠 What you'll practice</div>
+                 <div class="theory-line" style="margin-top:8px">${p.learn.map(escapeHtml).join(", ")}</div>
+               </div>`}
         </div>
         <div class="proj-code">
           <div class="puzzle-prompt">Finish the code, step by step. Click ▶ Run any time — input() will pop up a real prompt box.</div>
-          <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false">${escapeHtml(p.starter)}</textarea>
+          <textarea id="proj-editor" class="code-editor proj-editor" spellcheck="false" placeholder="Write your code here, following the steps on the left…">${escapeHtml(view.projDraft)}</textarea>
           <div class="puzzle-actions">
             <button class="btn primary" id="proj-run-btn">▶ Run</button>
             <button class="btn green" id="proj-done-btn">${done ? "✓ Marked Complete" : "✅ Mark Complete"}</button>
@@ -470,6 +495,8 @@ function renderProject() {
   document.getElementById("proj-next-btn").onclick = () => { if (idx < PROJECTS.length - 1) showProject(idx + 1); };
   document.getElementById("proj-run-btn").onclick = runProject;
   document.getElementById("proj-done-btn").onclick = markProjectDone;
+  const approveBtn = document.getElementById("step-approve-btn");
+  if (approveBtn) approveBtn.onclick = approveStep;
 
   const editor = document.getElementById("proj-editor");
   editor.addEventListener("keydown", e => {
@@ -500,6 +527,7 @@ async function runProject() {
 }
 
 function markProjectDone() {
+  captureDraft();
   const p = PROJECTS[view.projIndex];
   const first = !progress.projects_done.includes(p.id);
   if (first) {

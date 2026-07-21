@@ -220,6 +220,11 @@ body{
 }
 .level-badge-of{ font-weight: normal; opacity: 0.8; text-transform: none; letter-spacing: normal; }
 .trophy-badge{ background: var(--sun); color: #5a3b00; }
+.proj-approve-btn{ margin-top: 12px; }
+.proj-locked-teaser{
+  text-align: center; color: var(--muted); font-size: 13px; font-weight: bold;
+  padding: 10px; border: 1px dashed var(--line); border-radius: 10px;
+}
 .proj-practice .level-badge{ background: var(--mint); color: #053; }
 
 /* Split layout: steps stacked on the left, one big persistent editor on the right */
